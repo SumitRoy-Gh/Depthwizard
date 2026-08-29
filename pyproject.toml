@@ -6,4 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "numpy>=2.5.2",
+    "opencv-python>=5.0.0.93",
+    "rasterio>=1.5.1",
+    "scipy>=1.18.1",
 ]
