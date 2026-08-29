@@ -1,14 +1,13 @@
 """
-data_normalization.py — final stage before data reaches a model.
+data_normalization.py — Stage 6 (final) of the DepthWizard preprocessing chain.
 
-This is DIFFERENT from the percentile stretch used earlier to get 16-bit DN
-into a display-able 0-255 range for the frozen depth model's image
-processor. That stretch is a display/compatibility step for one specific
-consumer (DAv2's preprocessor, which expects roughly natural-image-like
-uint8 input). THIS stage is the general-purpose tensor normalization your
-OWN correction U-Net needs for stable training — zero-mean, unit-variance
-(or a clean [0,1]/[-1,1] range) float tensors, computed from statistics
-YOU control and can reuse consistently between training and inference.
+This is DIFFERENT from the percentile stretch in radiometric_correction.py.
+That stretch is a display/compatibility step for one specific consumer
+(DAv2's preprocessor, which expects roughly natural-image-like uint8
+input). THIS stage is the general-purpose tensor normalization the
+correction U-Net needs for stable training — zero-mean, unit-variance
+float tensors, computed from statistics you control and reuse
+consistently between training and inference.
 
 Two things get normalized differently, on purpose:
   - Native imagery bands -> normalized with DATASET-level statistics
@@ -18,8 +17,9 @@ Two things get normalized differently, on purpose:
     "relative depth" from a monocular model has no fixed absolute scale
     even between two patches of the same scene — there's no dataset-level
     depth statistic that means anything to normalize against. This is also
-    why the correction U-Net's own scale/shift head (a, b) exists: to relearn
-    the scale that per-patch depth normalization necessarily throws away.
+    why the correction U-Net's own scale/shift head (a, b) exists: to
+    relearn the scale that per-patch depth normalization necessarily
+    throws away.
 """
 from __future__ import annotations
 import numpy as np
@@ -34,9 +34,9 @@ class ChannelStats:
 
 def compute_dataset_stats(patch_arrays: list[np.ndarray], valid_masks: list[np.ndarray] | None = None) -> ChannelStats:
     """
-    Compute per-channel mean/std across many patches (e.g. your whole
+    Compute per-channel mean/std across many patches (e.g. the whole
     training split), using only valid pixels if masks are given. Run this
-    ONCE after your dataset is built, save the result, and reuse the exact
+    ONCE after the dataset is built, save the result, and reuse the exact
     same numbers at inference — recomputing stats per-image would make
     outputs inconsistent between training and deployment.
     """
@@ -60,11 +60,7 @@ def compute_dataset_stats(patch_arrays: list[np.ndarray], valid_masks: list[np.n
 
 
 def normalize_image(image: np.ndarray, stats: ChannelStats) -> np.ndarray:
-    """
-    Z-score normalize each channel using DATASET-level stats: (x - mean) / std.
-    image: (H, W, C) any numeric dtype (uint8 after stretch, or float32).
-    Returns float32, roughly zero-mean unit-variance per channel.
-    """
+    """Z-score normalize each channel using DATASET-level stats: (x - mean) / std."""
     out = np.zeros(image.shape, dtype=np.float32)
     for c in range(image.shape[-1]):
         out[..., c] = (image[..., c].astype(np.float32) - stats.mean[c]) / max(stats.std[c], 1e-6)
@@ -83,13 +79,10 @@ def normalize_depth_per_patch(raw_depth: np.ndarray, valid_mask: np.ndarray | No
                                method: str = "minmax") -> tuple[np.ndarray, dict]:
     """
     Normalize ONE patch's raw relative depth independently — deliberately
-    NOT using dataset-level stats (see module docstring for why). Returns
+    NOT using dataset-level stats (see module docstring). Returns
     (D_norm, params) where params lets you exactly invert this later, and
-    is also useful to log/inspect (e.g. to catch a degenerate all-flat depth
-    patch where min==max, which would otherwise divide by zero).
-
-    method="minmax": scales to [0, 1] using this patch's own min/max.
-    method="zscore": this patch's own mean/std.
+    is also useful to log/inspect (e.g. to catch a degenerate all-flat
+    depth patch where min==max, which would otherwise divide by zero).
     """
     sample = raw_depth[valid_mask] if valid_mask is not None else raw_depth.ravel()
     if sample.size == 0:
@@ -100,6 +93,8 @@ def normalize_depth_per_patch(raw_depth: np.ndarray, valid_mask: np.ndarray | No
         if d_max - d_min < 1e-6:
             return np.zeros_like(raw_depth, dtype=np.float32), {"method": method, "min": d_min, "max": d_max, "degenerate": True}
         d_norm = (raw_depth - d_min) / (d_max - d_min)
+        if valid_mask is not None:
+            d_norm = np.where(valid_mask, d_norm, 0.0)
         return d_norm.astype(np.float32), {"method": method, "min": d_min, "max": d_max, "degenerate": False}
 
     elif method == "zscore":
@@ -107,9 +102,12 @@ def normalize_depth_per_patch(raw_depth: np.ndarray, valid_mask: np.ndarray | No
         if std < 1e-6:
             return np.zeros_like(raw_depth, dtype=np.float32), {"method": method, "mean": mean, "std": std, "degenerate": True}
         d_norm = (raw_depth - mean) / std
+        if valid_mask is not None:
+            d_norm = np.where(valid_mask, d_norm, 0.0)
         return d_norm.astype(np.float32), {"method": method, "mean": mean, "std": std, "degenerate": False}
 
-    raise ValueError(f"unknown method: {method}")
+    else:
+        raise ValueError(f"unknown method: {method}")
 
 
 def denormalize_depth_per_patch(d_norm: np.ndarray, params: dict) -> np.ndarray:

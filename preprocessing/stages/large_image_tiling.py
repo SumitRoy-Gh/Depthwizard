@@ -2,11 +2,11 @@
 large_image_tiling.py — memory-safe windowed reading of large rasters, and
 seamless stitching of per-tile outputs back into one mosaic.
 
-This is NOT the same thing as the patch-cropping used to build training
-samples (that one assumes the raster already fits in memory and just wants
-fixed 512x512 crops for a dataset). This module solves a different problem:
-a real deployment input could be 10000x10000px or larger, which will not
-fit in memory or GPU VRAM at once. Two things are needed:
+This is NOT the same thing as tiling.py's patch-cropping (that one
+assumes the raster already fits in memory and just wants fixed 512x512
+crops for a training dataset). This module solves a different problem:
+a real deployment input could be 10000x10000px or larger, which will
+not fit in memory or GPU VRAM at once. Two things are needed:
 
   1. Read only a WINDOW of the file at a time (rasterio windowed I/O),
      never the full array.

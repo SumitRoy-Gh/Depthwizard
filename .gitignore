@@ -1,12 +1,65 @@
-# Python-generated files
+# ==========================================
+# DepthWizard (SIH175) Git Ignore Rules
+# Tailored specifically for workspace structure
+# ==========================================
+
+# 1. Virtual Environments
+.venv/
+env/
+venv/
+
+# 2. Python Caches & Build Artifacts
 __pycache__/
-*.py[oc]
+preprocessing/__pycache__/
+preprocessing/ingest/__pycache__/
+preprocessing/pipelines/__pycache__/
+preprocessing/stages/__pycache__/
+preprocessing/tests/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
 build/
 dist/
-wheels/
-*.egg-info
+*.egg-info/
 
-# Virtual environments
-.venv
+# 3. Data Directories & Heavy Raster Files
+# Ignore all raw, synthetic, and intermediate data files
+data/raw/
+data/synthetic/
+data/synthetic_bad_gsd/
+data/processed/
+data/patches/
+sample.tif
 
-*.zip
+# Ignore all standalone geospatial raster binary formats
+*.tif
+*.tiff
+*.geotiff
+*.tfw
+*.prj
+*.png.aux.xml
+
+# 4. Model Checkpoints & Statistics
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+weights/
+checkpoints/
+stats.json
+
+# 5. Logs & Experiment Outputs
+*.log
+runs/
+logs/
+wandb/
+.tensorboard/
+
+# 6. OS & IDE Metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
