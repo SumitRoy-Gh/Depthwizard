@@ -11,6 +11,7 @@ dependencies = [
     "scikit-image>=0.26.0",
     "scipy>=1.18.1",
     "torch>=2.5.0",
+    "torchvision>=0.20.0",
     "transformers>=4.46.0",
 ]
 
