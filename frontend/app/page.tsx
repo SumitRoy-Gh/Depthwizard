@@ -1,9 +1,19 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 import { ArrowRight, Sparkles, Cpu, ScanLine, Mountain } from "lucide-react";
-import { SplitHeading, CharHeading, Reveal, Magnetic } from "@/components/shared/Motion";
+import {
+  SplitHeading,
+  CharHeading,
+  Reveal,
+  RevealOnScroll,
+  Parallax,
+  ScrollMarquee,
+  ScrollProgress,
+  Magnetic,
+} from "@/components/shared/Motion";
 import { Pill } from "@/components/shared/Pill";
 import { DropZone } from "@/components/upload/DropZone";
 import { SampleTiles } from "@/components/upload/SampleTiles";
@@ -20,66 +30,80 @@ const HeroScene = dynamic(
 export default function HomePage() {
   return (
     <div className="relative">
+      <ScrollProgress />
+
       {/* Hero */}
-      <section className="relative mx-auto max-w-7xl px-6 pb-12 pt-12 md:pt-20">
-        {/* Hero 3D background — right-anchored */}
-        <div className="absolute -right-32 top-0 hidden h-[640px] w-[640px] opacity-95 md:block">
-          <HeroScene />
+      <section className="relative pb-12 pt-12 md:pt-20">
+        {/* The globe bleeds to the viewport edge so there's no visible seam
+            between the text column and the 3D scene. We deliberately do NOT
+            constrain it inside max-w-7xl — it escapes the container. */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58vw] max-w-[820px] md:block">
+          <FadeOutOnScroll>
+            <HeroScene />
+          </FadeOutOnScroll>
         </div>
 
-        <div className="relative max-w-3xl">
-          <LiveTelemetryStrip />
+        {/* Soft fade on the right edge so the globe melts into the page */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-32 bg-gradient-to-r from-transparent to-void md:block" />
 
-          <Reveal delay={0.2} className="mt-8">
-            <div className="flex flex-wrap items-center gap-2">
-              <Pill tone="cyan">
-                <Sparkles className="h-3 w-3" /> v0.1 · Live
-              </Pill>
-              <Pill tone="muted">Single-view · 2D → 3D</Pill>
-              <Pill tone="muted">Depth Anything v2</Pill>
-            </div>
-          </Reveal>
+        {/* Text column — constrained, vertically centered against the globe.
+            The Parallax wrapper gently drifts the text down as you scroll,
+            creating a sense of depth against the fixed globe. */}
+        <div className="relative mx-auto flex max-w-7xl items-center px-6">
+          <Parallax strength={40} className="max-w-3xl w-full">
+            <LiveTelemetryStrip />
 
-          <h1 className="mt-6 text-balance text-5xl font-semibold leading-[0.95] tracking-tightest text-primary md:text-7xl">
-            <SplitHeading text="From one image," />
-            <br />
-            <span className="text-gradient-aurora">
-              <CharHeading text="a 3D world." />
-            </span>
-          </h1>
+            <Reveal delay={0.2} className="mt-8">
+              <div className="flex flex-wrap items-center gap-2">
+                <Pill tone="cyan">
+                  <Sparkles className="h-3 w-3" /> v0.1 · Live
+                </Pill>
+                <Pill tone="muted">Single-view · 2D → 3D</Pill>
+                <Pill tone="muted">Depth Anything v2</Pill>
+              </div>
+            </Reveal>
 
-          <Reveal delay={0.8} className="mt-6 max-w-xl">
-            <p className="text-pretty text-lg leading-relaxed text-muted">
-              Drop an overhead tile. We stretch the dynamic range, mask clouds,
-              run a frozen monocular foundation model, then calibrate it into
-              metric height. The result rises out of the canvas in twelve seconds.
-            </p>
-          </Reveal>
+            <h1 className="mt-6 text-balance text-5xl font-semibold leading-[0.95] tracking-tightest text-primary md:text-7xl">
+              <SplitHeading text="From one image," />
+              <br />
+              <span className="text-gradient-aurora">
+                <CharHeading text="a 3D world." />
+              </span>
+            </h1>
 
-          <Reveal delay={1.0} className="mt-8 flex flex-wrap items-center gap-3">
-            <Link href="#studio">
-              <Magnetic strength={0.15}>
-                <button className="btn-aurora group flex items-center gap-2 rounded-full border border-cyan/40 bg-cyan/15 px-6 py-3 text-sm font-medium text-cyan shadow-glow transition-all hover:bg-cyan/25">
-                  Start a run
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            <Reveal delay={0.8} className="mt-6 max-w-xl">
+              <p className="text-pretty text-lg leading-relaxed text-muted">
+                Drop an overhead tile. We stretch the dynamic range, mask clouds,
+                run a frozen monocular foundation model, then calibrate it into
+                metric height. The result rises out of the canvas in twelve seconds.
+              </p>
+            </Reveal>
+
+            <Reveal delay={1.0} className="mt-8 flex flex-wrap items-center gap-3">
+              <Link href="#studio">
+                <Magnetic strength={0.15}>
+                  <button className="btn-aurora group flex items-center gap-2 rounded-full border border-cyan/40 bg-cyan/15 px-6 py-3 text-sm font-medium text-cyan shadow-glow transition-all hover:bg-cyan/25">
+                    Start a run
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                </Magnetic>
+              </Link>
+              <Link href="/about">
+                <button className="rounded-full border border-white/10 bg-elevated/40 px-6 py-3 text-sm font-medium text-primary backdrop-blur transition-all hover:border-white/20">
+                  Read the technical notes
                 </button>
-              </Magnetic>
-            </Link>
-            <Link href="/about">
-              <button className="rounded-full border border-white/10 bg-elevated/40 px-6 py-3 text-sm font-medium text-primary backdrop-blur transition-all hover:border-white/20">
-                Read the technical notes
-              </button>
-            </Link>
-          </Reveal>
+              </Link>
+            </Reveal>
 
-          {/* Key stats */}
-          <Reveal delay={1.2}>
-            <div className="mt-10 grid max-w-xl grid-cols-3 gap-2">
-              <Stat label="Pipeline stages" value="7 + U-Net" />
-              <Stat label="Mean latency" value="~12 s" />
-              <Stat label="Tested on" value="Vaihingen" />
-            </div>
-          </Reveal>
+            {/* Key stats */}
+            <Reveal delay={1.2}>
+              <div className="mt-10 grid max-w-xl grid-cols-3 gap-2">
+                <Stat label="Pipeline stages" value="7 + U-Net" />
+                <Stat label="Mean latency" value="~12 s" />
+                <Stat label="Tested on" value="Vaihingen" />
+              </div>
+            </Reveal>
+          </Parallax>
         </div>
       </section>
 
@@ -87,7 +111,7 @@ export default function HomePage() {
       <section id="studio" className="relative mx-auto max-w-7xl px-6 pb-16">
         <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
           <div className="space-y-6">
-            <Reveal>
+            <RevealOnScroll>
               <div className="flex items-end justify-between">
                 <div>
                   <p className="font-mono text-2xs uppercase tracking-[0.18em] text-cyan">
@@ -102,13 +126,13 @@ export default function HomePage() {
                 </div>
                 <Pill tone="muted">7 stages</Pill>
               </div>
-            </Reveal>
+            </RevealOnScroll>
 
-            <Reveal delay={0.15}>
+            <RevealOnScroll delay={0.1}>
               <DropZone />
-            </Reveal>
+            </RevealOnScroll>
 
-            <Reveal delay={0.25}>
+            <RevealOnScroll delay={0.15}>
               <div className="flex items-center gap-2">
                 <span className="h-px flex-1 bg-white/8" />
                 <span className="font-mono text-2xs uppercase tracking-[0.18em] text-faint">
@@ -116,24 +140,24 @@ export default function HomePage() {
                 </span>
                 <span className="h-px flex-1 bg-white/8" />
               </div>
-            </Reveal>
+            </RevealOnScroll>
 
-            <Reveal delay={0.3}>
+            <RevealOnScroll delay={0.2}>
               <SampleTiles />
-            </Reveal>
+            </RevealOnScroll>
 
-            <Reveal delay={0.4}>
+            <RevealOnScroll delay={0.25}>
               <AdvancedOptions />
-            </Reveal>
+            </RevealOnScroll>
 
-            <Reveal delay={0.5}>
+            <RevealOnScroll delay={0.3}>
               <RecentUploads />
-            </Reveal>
+            </RevealOnScroll>
           </div>
 
           {/* Side rail — pipeline overview */}
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-            <Reveal delay={0.2}>
+            <RevealOnScroll delay={0.1}>
               <div className="glass rounded-2xl p-5">
                 <p className="font-mono text-2xs uppercase tracking-[0.18em] text-cyan">
                   What runs
@@ -165,9 +189,9 @@ export default function HomePage() {
                   ))}
                 </ol>
               </div>
-            </Reveal>
+            </RevealOnScroll>
 
-            <Reveal delay={0.35}>
+            <RevealOnScroll delay={0.2}>
               <div className="glass rounded-2xl p-5">
                 <p className="font-mono text-2xs uppercase tracking-[0.18em] text-amber">
                   Honest scope
@@ -190,26 +214,37 @@ export default function HomePage() {
                   </li>
                 </ul>
               </div>
-            </Reveal>
+            </RevealOnScroll>
           </aside>
         </div>
       </section>
 
-      {/* Marquee */}
-      <section className="relative border-y border-white/5 bg-void/40 py-6 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-12 gap-y-3 px-6 text-2xs">
+      {/* Marquee — scrolls horizontally, content doubled for seamless loop */}
+      <section className="relative overflow-hidden border-y border-white/5 bg-void/40 py-8 backdrop-blur">
+        <ScrollMarquee speed={36} className="text-2xs">
           <span className="font-mono uppercase tracking-[0.18em] text-faint">Datasets</span>
-          {["ISPRS Vaihingen", "ISPRS Potsdam", "DFC2019"].map((d) => (
-            <span key={d} className="text-muted">{d}</span>
-          ))}
+          <span className="text-muted">ISPRS Vaihingen</span>
+          <span className="text-muted">ISPRS Potsdam</span>
+          <span className="text-muted">DFC2019</span>
           <span className="h-3 w-px bg-white/10" />
           <span className="font-mono uppercase tracking-[0.18em] text-faint">Models</span>
           <span className="text-muted">Depth Anything v2 (Base)</span>
           <span className="text-muted">Correction U-Net</span>
           <span className="h-3 w-px bg-white/10" />
           <span className="font-mono uppercase tracking-[0.18em] text-faint">Built with</span>
-          <span className="text-muted">Three.js · MapLibre · React Query</span>
-        </div>
+          <span className="text-muted">Three.js</span>
+          <span className="text-muted">MapLibre</span>
+          <span className="text-muted">React Query</span>
+          <span className="h-3 w-px bg-white/10" />
+          <span className="font-mono uppercase tracking-[0.18em] text-faint">Pipeline</span>
+          <span className="text-muted">Radiometric</span>
+          <span className="text-muted">Masking</span>
+          <span className="text-muted">Denoise</span>
+          <span className="text-muted">CLAHE</span>
+          <span className="text-muted">Resolution</span>
+          <span className="text-muted">DAv2</span>
+          <span className="text-muted">U-Net</span>
+        </ScrollMarquee>
       </section>
     </div>
   );
@@ -224,6 +259,26 @@ function Stat({ label, value }: { label: string; value: string }) {
     >
       <p className="font-mono text-2xs uppercase tracking-[0.16em] text-faint">{label}</p>
       <p className="mt-1 text-base font-medium text-primary">{value}</p>
+    </motion.div>
+  );
+}
+
+/**
+ * Fades out + scales down its children as the user scrolls past them.
+ * Used to gracefully retire the hero globe once the user moves to the
+ * Studio section.
+ */
+function FadeOutOnScroll({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end start"],
+  });
+  const opacity = useTransform(scrollYProgress, [0, 0.6, 1], [1, 0.6, 0]);
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 0.85]);
+  return (
+    <motion.div ref={ref} style={{ opacity, scale }} className="h-full w-full">
+      {children}
     </motion.div>
   );
 }

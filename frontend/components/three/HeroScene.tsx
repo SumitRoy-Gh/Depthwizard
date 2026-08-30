@@ -89,6 +89,7 @@ export function HeroScene() {
           <CityPins />
           <Arcs />
           <Atmosphere />
+          <PointerController />
         </GlobeRig>
 
         <StarShell />
@@ -97,80 +98,124 @@ export function HeroScene() {
   );
 }
 
+// Disable raycasting on a mesh so it never participates in pointer picking.
+function noRaycast() { return null; }
+
 // ---------------------------------------------------------------------------
 // Globe rig — drag-to-orbit + idle auto-rotation + wheel zoom.
 // Uses R3F native pointer events so we don't risk stale-closure bugs from
 // effect-attached listeners, and stays inside the R3F render loop.
 // ---------------------------------------------------------------------------
 
+// Module-level shared state for the globe's rotation / zoom / drag. This
+// lets the PointerController (a separate component) drive the rig without
+// prop drilling, and avoids React re-renders on every pointer event.
+const GLOBE_STATE = {
+  dragging: false,
+  velocity: { x: 0, y: 0 },
+  scale: 1,
+  // Accumulated pending rotation delta — applied by the rig each frame.
+  pendingDelta: { x: 0, y: 0 },
+};
+
 function GlobeRig({ children }: { children: React.ReactNode }) {
   const groupRef = useRef<THREE.Group>(null);
-  const draggingRef = useRef(false);
-  const lastPointer = useRef<{ x: number; y: number } | null>(null);
-  const velocity = useRef({ x: 0, y: 0 });
   const rot = useRef({ x: 0.15, y: -0.6 });
 
   useFrame((_, dt) => {
     const g = groupRef.current;
     if (!g) return;
-    if (!draggingRef.current) {
-      rot.current.y += velocity.current.y * 0.92;
-      rot.current.x += velocity.current.x * 0.92;
+
+    // Apply any pending delta from pointer events (instant response while dragging).
+    if (GLOBE_STATE.pendingDelta.x !== 0 || GLOBE_STATE.pendingDelta.y !== 0) {
+      rot.current.y += GLOBE_STATE.pendingDelta.y;
+      rot.current.x += GLOBE_STATE.pendingDelta.x;
+      GLOBE_STATE.pendingDelta = { x: 0, y: 0 };
+    }
+
+    if (!GLOBE_STATE.dragging) {
+      rot.current.y += GLOBE_STATE.velocity.y * 0.92;
+      rot.current.x += GLOBE_STATE.velocity.x * 0.92;
       rot.current.x = Math.max(-1.2, Math.min(1.2, rot.current.x));
-      velocity.current.x *= 0.94;
-      velocity.current.y *= 0.94;
-      if (Math.abs(velocity.current.y) < 0.0005) {
+      GLOBE_STATE.velocity.x *= 0.94;
+      GLOBE_STATE.velocity.y *= 0.94;
+      if (Math.abs(GLOBE_STATE.velocity.y) < 0.0005) {
         rot.current.y += dt * 0.06;
       }
     }
     g.rotation.y = rot.current.y;
     g.rotation.x = rot.current.x;
+    g.scale.setScalar(GLOBE_STATE.scale);
   });
 
+  return <group ref={groupRef}>{children}</group>;
+}
+
+/**
+ * PointerController — invisible hit-sphere that owns all pointer events.
+ * Because all visual meshes use raycast={null}, this single mesh is the
+ * only one R3F hit-tests, so dragging never gets interrupted by the cursor
+ * crossing a child mesh.
+ */
+function PointerController() {
+  const lastPointer = useRef<{ x: number; y: number } | null>(null);
+
   return (
-    <group
-      ref={groupRef}
+    <mesh
       onPointerOver={() => {
         if (typeof document !== "undefined") document.body.style.cursor = "grab";
       }}
       onPointerOut={() => {
-        draggingRef.current = false;
+        GLOBE_STATE.dragging = false;
+        GLOBE_STATE.velocity = { x: 0, y: 0 };
+        GLOBE_STATE.pendingDelta = { x: 0, y: 0 };
         lastPointer.current = null;
         if (typeof document !== "undefined") document.body.style.cursor = "";
       }}
       onPointerDown={(e) => {
-        draggingRef.current = true;
+        GLOBE_STATE.dragging = true;
         lastPointer.current = { x: e.clientX, y: e.clientY };
-        velocity.current = { x: 0, y: 0 };
+        GLOBE_STATE.velocity = { x: 0, y: 0 };
+        GLOBE_STATE.pendingDelta = { x: 0, y: 0 };
         if (typeof document !== "undefined") document.body.style.cursor = "grabbing";
-        (e.target as Element).setPointerCapture?.(e.pointerId);
+        // Capture on the underlying canvas so moves keep firing even when the
+        // cursor leaves the bounding sphere.
+        const target = (e.nativeEvent.currentTarget ?? e.nativeEvent.target) as Element | null;
+        target?.setPointerCapture?.(e.pointerId);
       }}
       onPointerMove={(e) => {
-        if (!draggingRef.current || !lastPointer.current) return;
+        if (!GLOBE_STATE.dragging || !lastPointer.current) return;
         const dx = e.clientX - lastPointer.current.x;
         const dy = e.clientY - lastPointer.current.y;
-        rot.current.y += dx * 0.005;
-        rot.current.x += dy * 0.005;
-        rot.current.x = Math.max(-1.2, Math.min(1.2, rot.current.x));
-        velocity.current = { x: dy * 0.005, y: dx * 0.005 };
+        // Instant response: write into pendingDelta, rig applies next frame.
+        GLOBE_STATE.pendingDelta = { x: dy * 0.005, y: dx * 0.005 };
+        GLOBE_STATE.velocity = { x: dy * 0.005, y: dx * 0.005 };
         lastPointer.current = { x: e.clientX, y: e.clientY };
       }}
       onPointerUp={(e) => {
-        draggingRef.current = false;
+        GLOBE_STATE.dragging = false;
         lastPointer.current = null;
         if (typeof document !== "undefined") document.body.style.cursor = "";
-        (e.target as Element).releasePointerCapture?.(e.pointerId);
+        const target = (e.nativeEvent.currentTarget ?? e.nativeEvent.target) as Element | null;
+        target?.releasePointerCapture?.(e.pointerId);
+      }}
+      onPointerMissed={() => {
+        GLOBE_STATE.dragging = false;
+        GLOBE_STATE.velocity = { x: 0, y: 0 };
+        GLOBE_STATE.pendingDelta = { x: 0, y: 0 };
+        lastPointer.current = null;
+        if (typeof document !== "undefined") document.body.style.cursor = "";
       }}
       onWheel={(e) => {
-        const g = groupRef.current;
-        if (!g) return;
-        const s = g.scale.x;
-        const next = Math.max(0.7, Math.min(1.6, s * (1 + e.deltaY * 0.0006)));
-        g.scale.setScalar(next);
+        GLOBE_STATE.scale = Math.max(
+          0.7,
+          Math.min(1.6, GLOBE_STATE.scale * (1 + e.deltaY * 0.0006))
+        );
       }}
     >
-      {children}
-    </group>
+      <sphereGeometry args={[RADIUS * 1.9, 32, 32]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
   );
 }
 
@@ -202,7 +247,7 @@ function StarShell() {
   });
 
   return (
-    <points ref={ref}>
+    <points ref={ref} raycast={noRaycast}>
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
         <bufferAttribute attach="attributes-size" args={[sizes, 1]} />
@@ -327,7 +372,7 @@ function Globe() {
   });
 
   return (
-    <mesh ref={meshRef}>
+    <mesh ref={meshRef} raycast={noRaycast}>
       <sphereGeometry args={[RADIUS, 96, 96]} />
       <shaderMaterial
         ref={matRef}
@@ -382,22 +427,19 @@ const GRATICULE_LINES: { points: THREE.Vector3[]; op: number }[] = (() => {
 function Graticule() {
   return (
     <group>
-      {GRATICULE_LINES.map((l, i) => (
-        <primitive
-          key={i}
-          object={
-            new THREE.Line(
-              new THREE.BufferGeometry().setFromPoints(l.points),
-              new THREE.LineBasicMaterial({
-                color: "#22D3EE",
-                transparent: true,
-                opacity: l.op,
-                depthWrite: false,
-              })
-            )
-          }
-        />
-      ))}
+      {GRATICULE_LINES.map((l, i) => {
+        const line = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints(l.points),
+          new THREE.LineBasicMaterial({
+            color: "#22D3EE",
+            transparent: true,
+            opacity: l.op,
+            depthWrite: false,
+          })
+        );
+        line.raycast = noRaycast;
+        return <primitive key={i} object={line} />;
+      })}
     </group>
   );
 }
@@ -427,7 +469,7 @@ function CityPins() {
     <group ref={groupRef}>
       {PIN_POSITIONS.map((p, i) => (
         <group key={i} position={p}>
-          <mesh>
+          <mesh raycast={noRaycast}>
             <ringGeometry args={[0.03, 0.06, 24]} />
             <meshBasicMaterial
               color="#22D3EE"
@@ -438,7 +480,7 @@ function CityPins() {
               blending={THREE.AdditiveBlending}
             />
           </mesh>
-          <mesh>
+          <mesh raycast={noRaycast}>
             <sphereGeometry args={[0.025, 16, 16]} />
             <meshBasicMaterial color="#67E8F9" transparent opacity={0.9} />
           </mesh>
@@ -488,24 +530,26 @@ function Arcs() {
 
   return (
     <group>
-      {ARC_DATA.map((l, i) => (
-        <primitive
-          key={i}
-          ref={(el: THREE.Line | null) => { refs.current[i] = el; }}
-          object={
-            new THREE.Line(
-              l.geom,
-              new THREE.LineBasicMaterial({
-                color: "#22D3EE",
-                transparent: true,
-                opacity: 0.3,
-                depthWrite: false,
-                blending: THREE.AdditiveBlending,
-              })
-            )
-          }
-        />
-      ))}
+      {ARC_DATA.map((l, i) => {
+        const line = new THREE.Line(
+          l.geom,
+          new THREE.LineBasicMaterial({
+            color: "#22D3EE",
+            transparent: true,
+            opacity: 0.3,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+          })
+        );
+        line.raycast = noRaycast;
+        return (
+          <primitive
+            key={i}
+            ref={(el: THREE.Line | null) => { refs.current[i] = el; }}
+            object={line}
+          />
+        );
+      })}
     </group>
   );
 }
@@ -536,7 +580,7 @@ function buildArc(a: THREE.Vector3, b: THREE.Vector3, segments: number, height: 
 
 function Atmosphere() {
   return (
-    <mesh scale={1.08}>
+    <mesh scale={1.08} raycast={noRaycast}>
       <sphereGeometry args={[RADIUS, 64, 64]} />
       <shaderMaterial
         vertexShader={`

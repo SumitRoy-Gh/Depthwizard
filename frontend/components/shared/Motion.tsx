@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
+import { motion, useMotionValue, useTransform, useSpring, useInView, useScroll, useVelocity, useReducedMotion } from "framer-motion";
 import { ReactNode, useRef } from "react";
 
 export function Magnetic({ children, strength = 0.25 }: { children: ReactNode; strength?: number }) {
@@ -52,6 +52,119 @@ export function Reveal({
     >
       {children}
     </motion.div>
+  );
+}
+
+/**
+ * Reveal on scroll — fires when the element enters the viewport.
+ * One-shot (once: true) so we don't re-animate on every scroll tick.
+ */
+export function RevealOnScroll({
+  children,
+  y = 28,
+  delay = 0,
+  className,
+  amount = 0.2,
+}: {
+  children: ReactNode;
+  y?: number;
+  delay?: number;
+  className?: string;
+  amount?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, amount });
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: reduced ? 0 : y, filter: reduced ? "none" : "blur(6px)" }}
+      animate={
+        inView
+          ? { opacity: 1, y: 0, filter: "blur(0px)" }
+          : { opacity: 0, y: reduced ? 0 : y, filter: reduced ? "none" : "blur(6px)" }
+      }
+      transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * Parallax — moves the element on the Y axis proportional to its scroll
+ * progress through the viewport. Use sparingly — only on hero/decorative
+ * elements so it doesn't fight the readable content.
+ */
+export function Parallax({
+  children,
+  strength = 60,
+  className,
+}: {
+  children: ReactNode;
+  strength?: number;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  const y = useTransform(scrollYProgress, [0, 1], [strength, -strength]);
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      ref={ref}
+      style={{ y: reduced ? 0 : y }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * Page-level scroll progress bar — sits fixed at the top of the viewport.
+ * Tied to the entire document scroll position.
+ */
+export function ScrollProgress() {
+  const { scrollYProgress } = useScroll();
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      aria-hidden
+      className="fixed left-0 right-0 top-0 z-50 h-px origin-left bg-gradient-to-r from-cyan via-emerald to-amber"
+      style={{ scaleX: reduced ? 1 : scrollYProgress }}
+    />
+  );
+}
+
+/**
+ * Horizontal marquee that scrolls faster than the page (background motion).
+ * Wrap children; pass `speed` in seconds for one full loop.
+ */
+export function ScrollMarquee({
+  children,
+  speed = 28,
+  className,
+}: {
+  children: ReactNode;
+  speed?: number;
+  className?: string;
+}) {
+  const reduced = useReducedMotion();
+  return (
+    <div className={`overflow-hidden ${className ?? ""}`}>
+      <motion.div
+        className="flex w-max gap-12 whitespace-nowrap"
+        animate={reduced ? undefined : { x: ["0%", "-50%"] }}
+        transition={reduced ? undefined : { duration: speed, ease: "linear", repeat: Infinity }}
+      >
+        {children}
+        {children}
+      </motion.div>
+    </div>
   );
 }
 
@@ -123,3 +236,6 @@ export function useTilt(strength = 8) {
   };
   return { srx, sry, onMove, onLeave };
 }
+
+// Re-exported for convenience
+export { useInView, useScroll, useVelocity };
