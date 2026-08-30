@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 import { BackgroundCanvas } from "@/components/three/BackgroundCanvas";
@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   title: "DepthWizard — From one image, a 3D world.",
   description:
     "Upload a single overhead image and get back a fully interactive 3D height model. Pre-trained monocular depth + calibration, deployed as a cinematic experience.",
+};
+
+export const viewport: Viewport = {
   themeColor: "#05060A",
 };
 
