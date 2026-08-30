@@ -1,12 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
-const HeroScene = dynamic(
-  () => import("@/components/three/HeroScene").then((m) => m.HeroScene),
-  { ssr: false }
-);
-
 export function BackgroundCanvas() {
   return (
     <div
@@ -30,5 +23,3 @@ export function BackgroundCanvas() {
     </div>
   );
 }
-
-export { HeroScene };

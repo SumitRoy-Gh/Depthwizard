@@ -213,6 +213,56 @@
     );
   }
 
+  /* CSS starfield — two layers of box-shadow "stars" on 1px elements.
+     Generates hundreds of points with zero JS and zero WebGL. */
+  .stars {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .stars::before,
+  .stars::after {
+    content: "";
+    position: absolute;
+    border-radius: 9999px;
+    background: transparent;
+  }
+  .stars-far::before {
+    width: 1px;
+    height: 1px;
+    box-shadow:
+      12vw 18vh 0 rgba(255, 255, 255, 0.35), 34vw 8vh 0 rgba(190, 230, 255, 0.28),
+      56vw 26vh 0 rgba(255, 255, 255, 0.22), 78vw 12vh 0 rgba(255, 255, 255, 0.4),
+      92vw 34vh 0 rgba(190, 230, 255, 0.24), 22vw 48vh 0 rgba(255, 255, 255, 0.2),
+      44vw 62vh 0 rgba(255, 255, 255, 0.3), 66vw 78vh 0 rgba(190, 230, 255, 0.22),
+      8vw 72vh 0 rgba(255, 255, 255, 0.26), 88vw 58vh 0 rgba(255, 255, 255, 0.3),
+      16vw 88vh 0 rgba(190, 230, 255, 0.2), 52vw 92vh 0 rgba(255, 255, 255, 0.24),
+      72vw 44vh 0 rgba(255, 255, 255, 0.18), 30vw 32vh 0 rgba(255, 255, 255, 0.26),
+      62vw 6vh 0 rgba(190, 230, 255, 0.3), 96vw 78vh 0 rgba(255, 255, 255, 0.2),
+      4vw 40vh 0 rgba(255, 255, 255, 0.22), 40vw 84vh 0 rgba(190, 230, 255, 0.18);
+    animation: starDrift 160s linear infinite;
+  }
+  .stars-near::before {
+    width: 2px;
+    height: 2px;
+    box-shadow:
+      18vw 22vh 0 rgba(160, 225, 255, 0.5), 48vw 14vh 0 rgba(255, 255, 255, 0.42),
+      70vw 38vh 0 rgba(160, 225, 255, 0.36), 86vw 66vh 0 rgba(255, 255, 255, 0.44),
+      26vw 58vh 0 rgba(160, 225, 255, 0.34), 58vw 72vh 0 rgba(255, 255, 255, 0.4),
+      10vw 8vh 0 rgba(255, 255, 255, 0.38), 94vw 20vh 0 rgba(160, 225, 255, 0.3),
+      38vw 92vh 0 rgba(255, 255, 255, 0.3), 76vw 88vh 0 rgba(160, 225, 255, 0.28);
+    animation: starDrift 110s linear infinite reverse;
+    animation-timing-function: linear;
+  }
+  @keyframes starDrift {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(-6vw, -3vh, 0);
+    }
+  }
+
   /* Shimmer — for loading states */
   .shimmer {
     background: linear-gradient(
@@ -249,6 +299,9 @@
   }
   .preserve-3d {
     transform-style: preserve-3d;
+  }
+  .rounded-4xl {
+    border-radius: 2rem;
   }
   .text-balance {
     text-wrap: balance;
