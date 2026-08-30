@@ -6,3 +6,5 @@ out
 *.log
 .DS_Store
 .vscode
+next-env.d.ts
+tsconfig.tsbuildinfo
