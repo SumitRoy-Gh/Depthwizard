@@ -13,6 +13,8 @@ const NAV = [
 
 export function Header() {
   const pathname = usePathname();
+  const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+
   return (
     <header className="sticky top-0 z-40">
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-void via-void/85 to-void/0 backdrop-blur-md" />
@@ -55,6 +57,11 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
+          {isDemo && (
+            <div className="hidden items-center gap-2 rounded-full border border-amber/20 bg-amber/5 px-3 py-1.5 font-mono text-2xs uppercase tracking-[0.16em] text-amber lg:flex">
+              Demo · mock backend
+            </div>
+          )}
           <div className="hidden items-center gap-2 rounded-full border border-white/5 bg-elevated/70 px-3 py-1.5 font-mono text-2xs uppercase tracking-[0.16em] text-muted lg:flex">
             <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald/60" />

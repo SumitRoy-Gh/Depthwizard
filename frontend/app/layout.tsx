@@ -6,13 +6,43 @@ import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
 
 export const metadata: Metadata = {
-  title: "DepthWizard — From one image, a 3D world.",
+  title: {
+    default: "DepthWizard — From one image, a 3D world.",
+    template: "%s · DepthWizard",
+  },
   description:
-    "Upload a single overhead image and get back a fully interactive 3D height model. Pre-trained monocular depth + calibration, deployed as a cinematic experience.",
+    "Upload a single overhead image and get back a fully interactive 3D height model. Depth Anything v2 + correction U-Net, deployed as a cinematic experience.",
+  applicationName: "DepthWizard",
+  authors: [{ name: "SIH 175 Team" }],
+  keywords: [
+    "DepthWizard",
+    "monocular depth",
+    "Depth Anything v2",
+    "3D flythrough",
+    "aerial imagery",
+    "DSM",
+    "SIH 175",
+    "single-view height",
+  ],
+  openGraph: {
+    title: "DepthWizard — From one image, a 3D world.",
+    description:
+      "A research demo for monocular single-view height estimation with a cinematic 3D flythrough.",
+    type: "website",
+    siteName: "DepthWizard",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DepthWizard — From one image, a 3D world.",
+    description:
+      "A research demo for monocular single-view height estimation with a cinematic 3D flythrough.",
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: "#05060A",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
