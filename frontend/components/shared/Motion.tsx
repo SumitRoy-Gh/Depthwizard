@@ -110,7 +110,7 @@ export function useTilt(strength = 8) {
   const srx = useSpring(rx, { stiffness: 200, damping: 20 });
   const sry = useSpring(ry, { stiffness: 200, damping: 20 });
 
-  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const onMove = (e: React.MouseEvent<HTMLElement>) => {
     const t = e.currentTarget.getBoundingClientRect();
     const px = (e.clientX - t.left) / t.width - 0.5;
     const py = (e.clientY - t.top) / t.height - 0.5;

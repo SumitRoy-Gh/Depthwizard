@@ -148,10 +148,7 @@ function DataStreams() {
       {lines.map((l, i) => {
         const geom = new THREE.BufferGeometry().setFromPoints([l.from, l.to]);
         return (
-          // eslint-disable-next-line react/no-unknown-property
-          <line key={i} geometry={geom}>
-            <lineBasicMaterial color="#22D3EE" transparent opacity={0.2} />
-          </line>
+          <primitive key={i} object={new THREE.Line(geom, new THREE.LineBasicMaterial({ color: "#22D3EE", transparent: true, opacity: 0.2 }))} />
         );
       })}
     </group>

@@ -17,7 +17,7 @@ export function SceneBackground() {
       }}
     >
       <Suspense fallback={null}>
-        <color attach="background" args={[0, 0, 0, 0]} />
+        <color attach="background" args={["#000000"]} />
         <ambientLight intensity={0.25} />
         <directionalLight position={[5, 3, 5]} intensity={0.6} color="#67E8F9" />
         <directionalLight position={[-5, -2, 3]} intensity={0.3} color="#F59E0B" />
