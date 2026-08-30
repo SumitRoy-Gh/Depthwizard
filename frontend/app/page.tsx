@@ -23,7 +23,7 @@ export default function HomePage() {
       {/* Hero */}
       <section className="relative mx-auto max-w-7xl px-6 pb-12 pt-12 md:pt-20">
         {/* Hero 3D background — right-anchored */}
-        <div className="pointer-events-none absolute -right-32 top-0 hidden h-[640px] w-[640px] opacity-80 md:block">
+        <div className="absolute -right-32 top-0 hidden h-[640px] w-[640px] opacity-95 md:block">
           <HeroScene />
         </div>
 
