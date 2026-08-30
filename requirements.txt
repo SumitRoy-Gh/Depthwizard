@@ -3,3 +3,6 @@ scipy
 opencv-python
 rasterio
 scikit-image
+torch
+torchvision
+transformers
