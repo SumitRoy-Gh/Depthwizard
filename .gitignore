@@ -48,7 +48,6 @@ sample.tif
 weights/
 checkpoints/
 stats.json
-DOCS/STATUS.md
 
 # 5. Logs & Experiment Outputs
 *.log
