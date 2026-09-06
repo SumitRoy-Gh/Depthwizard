@@ -76,3 +76,28 @@ def align_dataset_to_common_gsd(
         "dsm": dsm_r[:h, :w],
         "valid_mask": mask_r[:h, :w],
     }
+
+
+def align_dataset_to_common_gsd_with_semantics(
+    imagery: np.ndarray, dsm: np.ndarray, valid_mask: np.ndarray, semantic: np.ndarray,
+    source_gsd_m: float, target_gsd_m: float,
+) -> dict[str, np.ndarray]:
+    """
+    Same as align_dataset_to_common_gsd() but also resamples the semantic
+    label layer. Semantic labels are CATEGORICAL (class IDs, not
+    continuous values) so they MUST use nearest-neighbor interpolation
+    (categorical=True) — averaging class IDs during bilinear resampling
+    would produce meaningless fractional class values.
+    """
+    base = align_dataset_to_common_gsd(imagery, dsm, valid_mask, source_gsd_m, target_gsd_m)
+    semantic_r = resample_to_gsd(semantic, source_gsd_m, target_gsd_m, categorical=True)
+
+    h = min(base["imagery"].shape[0], semantic_r.shape[0])
+    w = min(base["imagery"].shape[1], semantic_r.shape[1])
+
+    return {
+        "imagery": base["imagery"][:h, :w],
+        "dsm": base["dsm"][:h, :w],
+        "valid_mask": base["valid_mask"][:h, :w],
+        "semantic": semantic_r[:h, :w],
+    }

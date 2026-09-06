@@ -25,6 +25,35 @@ import rasterio
 from dataclasses import dataclass
 
 
+# ISPRS Vaihingen/Potsdam ship 6 semantic classes. We collapse them into 3
+# classes for calibration purposes. Values are the OUTPUT class IDs this
+# module produces; the INPUT encoding (raw pixel values in the source file)
+# is handled in _decode_isprs_label_colors() below because ISPRS label
+# rasters are typically RGB-color-coded, not single-band integer IDs.
+CALIBRATION_CLASS_GROUND = 0
+CALIBRATION_CLASS_BUILDING = 1
+CALIBRATION_CLASS_VEGETATION = 2
+CALIBRATION_CLASS_UNKNOWN = 255  # cars, clutter, or undecodable pixels — excluded from calibration fitting
+
+# ISPRS standard RGB color codes for the 6 classes (confirm against your
+# actual downloaded files — Vaihingen/Potsdam ground truth uses these
+# exact RGB triples per the official ISPRS benchmark documentation):
+#   Impervious surfaces : (255, 255, 255) white  -> GROUND
+#   Building             : (0, 0, 255) blue       -> BUILDING
+#   Low vegetation       : (0, 255, 255) cyan      -> VEGETATION
+#   Tree                 : (0, 255, 0) green       -> VEGETATION
+#   Car                  : (255, 255, 0) yellow    -> UNKNOWN (excluded)
+#   Clutter/background   : (255, 0, 0) red         -> UNKNOWN (excluded)
+_ISPRS_RGB_TO_CLASS = {
+    (255, 255, 255): CALIBRATION_CLASS_GROUND,
+    (0, 0, 255): CALIBRATION_CLASS_BUILDING,
+    (0, 255, 255): CALIBRATION_CLASS_VEGETATION,
+    (0, 255, 0): CALIBRATION_CLASS_VEGETATION,
+    (255, 255, 0): CALIBRATION_CLASS_UNKNOWN,
+    (255, 0, 0): CALIBRATION_CLASS_UNKNOWN,
+}
+
+
 @dataclass
 class SceneMeta:
     crs: str | None
@@ -35,6 +64,7 @@ class SceneMeta:
     dtype_imagery: str
     dtype_dsm: str
     band_count: int
+    semantic_gsd_m: float | None = None  # NEW — None if no semantic file was loaded
 
 
 def _gsd_from_transform(transform) -> float:
@@ -118,3 +148,78 @@ def load_scene(imagery_path: str, dsm_path: str, gsd_mismatch_tol_m: float = 1e-
         )
 
     return imagery, dsm, meta
+
+
+def load_semantic_tif(path: str) -> tuple[np.ndarray, float]:
+    """
+    Reads a semantic-label GeoTIFF and returns a single-band uint8 array
+    of COLLAPSED class IDs (values: CALIBRATION_CLASS_GROUND=0,
+    CALIBRATION_CLASS_BUILDING=1, CALIBRATION_CLASS_VEGETATION=2,
+    CALIBRATION_CLASS_UNKNOWN=255), plus this file's own gsd_m (for the
+    same mismatch check load_scene() already does for imagery vs DSM).
+
+    Handles two possible source encodings:
+      (a) RGB-color-coded label image (3 bands) — the ISPRS standard —
+          decoded via _ISPRS_RGB_TO_CLASS.
+      (b) Single-band integer label image — assumed to already use class
+          IDs 0/1/2 for ground/building/vegetation and anything else is
+          set to CALIBRATION_CLASS_UNKNOWN.
+
+    Raises ValueError on any RGB triple not found in _ISPRS_RGB_TO_CLASS
+    if that pixel is NOT already flagged unknown, so silent mis-mapping
+    is impossible.
+    """
+    with rasterio.open(path) as src:
+        arr = src.read()  # (C, H, W)
+        gsd = _gsd_from_transform(src.transform)
+
+    if arr.shape[0] == 1:
+        # Single-band integer labels
+        band = arr[0]
+        out = np.full(band.shape, CALIBRATION_CLASS_UNKNOWN, dtype=np.uint8)
+        out[band == CALIBRATION_CLASS_GROUND] = CALIBRATION_CLASS_GROUND
+        out[band == CALIBRATION_CLASS_BUILDING] = CALIBRATION_CLASS_BUILDING
+        out[band == CALIBRATION_CLASS_VEGETATION] = CALIBRATION_CLASS_VEGETATION
+        return out, gsd
+
+    # RGB-color-coded (3 bands)
+    rgb = np.transpose(arr[:3], (1, 2, 0))  # (H, W, 3)
+    out = np.full(rgb.shape[:2], CALIBRATION_CLASS_UNKNOWN, dtype=np.uint8)
+    for color, class_id in _ISPRS_RGB_TO_CLASS.items():
+        matches = np.all(rgb == np.array(color, dtype=rgb.dtype), axis=-1)
+        out[matches] = class_id
+
+    return out, gsd
+
+
+def load_scene_with_semantics(
+    imagery_path: str,
+    dsm_path: str,
+    semantic_path: str,
+    gsd_mismatch_tol_m: float = 1e-3,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, SceneMeta]:
+    """
+    Like load_scene(), but also loads and validates a semantic label
+    raster. Returns (imagery, dsm, semantic, meta). Raises ValueError
+    with the SAME style of message as load_scene()'s existing GSD/shape
+    checks if the semantic file's GSD or pixel dimensions don't match
+    the imagery/DSM pair.
+    """
+    imagery, dsm, meta = load_scene(imagery_path, dsm_path, gsd_mismatch_tol_m)
+    semantic, semantic_gsd = load_semantic_tif(semantic_path)
+    meta.semantic_gsd_m = semantic_gsd
+
+    if abs(meta.gsd_m - semantic_gsd) > gsd_mismatch_tol_m:
+        raise ValueError(
+            f"GSD mismatch between imagery ({meta.gsd_m:.4f} m/px) and "
+            f"semantic labels ({semantic_gsd:.4f} m/px) — these must match "
+            f"before tiling; resample one to match the other."
+        )
+    if imagery.shape[:2] != semantic.shape:
+        raise ValueError(
+            f"pixel-dimension mismatch: imagery {imagery.shape[:2]} vs "
+            f"semantic labels {semantic.shape} — these must cover the exact "
+            f"same extent at the same GSD."
+        )
+
+    return imagery, dsm, semantic, meta

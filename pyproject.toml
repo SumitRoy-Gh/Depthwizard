@@ -9,6 +9,7 @@ dependencies = [
     "opencv-python>=5.0.0.93",
     "rasterio>=1.5.1",
     "scikit-image>=0.26.0",
+    "scikit-learn>=1.6.0",
     "scipy>=1.18.1",
     "torch>=2.5.0",
     "torchvision>=0.20.0",
