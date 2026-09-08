@@ -509,3 +509,26 @@ html.theme-light .site-header .header-fade {
 html.theme-light .site-footer {
   background: linear-gradient(180deg, rgba(250, 250, 249, 0.7) 0%, rgba(244, 244, 241, 0.9) 100%);
 }
+
+/* ---------------------------------------------------------------------------
+   Light app pages — history / about / settings
+   Re-map the handful of hardcoded dark utilities these routes still use.
+--------------------------------------------------------------------------- */
+html.theme-light .border-white\/8 {
+  border-color: rgba(20, 23, 28, 0.08);
+}
+html.theme-light .border-white\/10 {
+  border-color: rgba(20, 23, 28, 0.12);
+}
+html.theme-light .bg-white\/5 {
+  background-color: rgba(20, 23, 28, 0.04);
+}
+html.theme-light .bg-white\/10 {
+  background-color: rgba(20, 23, 28, 0.08);
+}
+html.theme-light .bg-void\/80 {
+  background-color: rgba(20, 23, 28, 0.45);
+}
+html.theme-light .bg-void\/70 {
+  background-color: rgba(255, 255, 255, 0.85);
+}

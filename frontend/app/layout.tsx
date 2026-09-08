@@ -59,7 +59,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{if(location.pathname==='/')document.documentElement.classList.add('theme-light')}catch(e){}",
+              "try{if(['/','/history','/about','/settings'].includes(location.pathname))document.documentElement.classList.add('theme-light')}catch(e){}",
           }}
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
