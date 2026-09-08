@@ -94,7 +94,7 @@ export function DropZone() {
           </p>
         )}
         <div className="mt-6 flex items-center justify-center gap-2">
-          <button onClick={() => { setPicked(null); setError(null); }} className="rounded-full border border-white/10 px-4 py-2 text-sm text-muted hover:text-primary">
+          <button onClick={() => { setPicked(null); setError(null); }} className="rounded-full border border-hairline px-4 py-2 text-sm text-muted hover:text-primary">
             Choose another
           </button>
           <button onClick={onSubmit} disabled={upload.isPending} className="btn-aurora rounded-full border border-cyan/40 bg-cyan/15 px-6 py-2 text-sm font-medium text-cyan shadow-glow hover:bg-cyan/25">
@@ -111,10 +111,10 @@ export function DropZone() {
       onDragLeave={() => setIsOver(false)}
       onDrop={onDrop}
       className={cn(
-        "group relative isolate overflow-hidden rounded-3xl border transition-all duration-500",
+        "group relative isolate overflow-hidden rounded-3xl border bg-elevated/50 transition-all duration-500 backdrop-blur-sm",
         isOver
           ? "border-cyan/60 shadow-glow"
-          : "border-white/8 hover:border-cyan/30 hover:shadow-glow"
+          : "border-hairline hover:border-cyan/30 hover:shadow-glow"
       )}
     >
       {/* Animated gradient border highlight */}
@@ -148,8 +148,8 @@ export function DropZone() {
           {isOver ? "Release to analyze" : "Drop an overhead image"}
         </h3>
         <p className="mt-2 max-w-md text-sm text-muted">
-          One frame becomes a 3D height model in under two minutes.
-          Tiles are processed entirely on your local GPU cluster — no signup.
+          One frame becomes a 3D height model in minutes. No signup, no
+          configuration — the pipeline handles the rest.
         </p>
 
         <input
@@ -167,7 +167,7 @@ export function DropZone() {
           >
             Browse files
           </button>
-          <kbd className="hidden items-center gap-1 rounded-md border border-white/10 bg-elevated/60 px-2 py-1 font-mono text-2xs uppercase tracking-[0.16em] text-muted md:inline-flex">
+          <kbd className="hidden items-center gap-1 rounded-md border border-hairline bg-elevated/60 px-2 py-1 font-mono text-2xs uppercase tracking-[0.16em] text-muted md:inline-flex">
             <span>⌘ V</span>
             <span className="text-faint">paste</span>
           </kbd>
@@ -180,7 +180,7 @@ export function DropZone() {
           {SUPPORTED.map((ext) => (
             <span
               key={ext}
-              className="rounded-md border border-white/8 bg-elevated/40 px-2 py-1 font-mono text-2xs uppercase tracking-[0.14em] text-muted"
+              className="rounded-md border border-hairline bg-elevated/40 px-2 py-1 font-mono text-2xs uppercase tracking-[0.14em] text-muted"
             >
               {ext}
             </span>
@@ -224,17 +224,17 @@ function PreviewCard({
     >
       <div className="grid gap-0 md:grid-cols-[260px_1fr]">
         {/* Thumbnail */}
-        <div className="relative aspect-square overflow-hidden border-r border-white/5 bg-elevated">
+        <div className="relative aspect-square overflow-hidden border-r border-hairline bg-elevated">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={preview}
             alt={file.name}
             className="h-full w-full object-cover"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-void/40 via-transparent to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-black/30 via-transparent to-transparent" />
           <button
             onClick={onClear}
-            className="absolute right-2 top-2 rounded-full bg-void/80 p-1.5 text-muted backdrop-blur transition-colors hover:text-primary"
+            className="absolute right-2 top-2 rounded-full bg-black/60 p-1.5 text-white/80 backdrop-blur transition-colors hover:text-white"
             aria-label="Remove"
           >
             <X className="h-3.5 w-3.5" />
@@ -261,7 +261,7 @@ function PreviewCard({
             <Stat label="Scale" value={isGeo ? "Metric" : "Relative"} />
           </div>
 
-          <div className="rounded-xl border border-white/5 bg-void/40 p-3">
+          <div className="rounded-xl border border-hairline bg-stage/60 p-3">
             <p className="text-xs leading-relaxed text-muted">
               {isGeo
                 ? "Heights will be reported in metric units (meters) using the source GSD. GeoTIFF export will be available."
@@ -278,7 +278,7 @@ function PreviewCard({
           <div className="mt-auto flex items-center gap-2">
             <button
               onClick={onClear}
-              className="rounded-full border border-white/10 px-4 py-2 text-sm text-muted hover:text-primary"
+              className="rounded-full border border-hairline px-4 py-2 text-sm text-muted hover:text-primary"
             >
               Replace
             </button>
@@ -309,7 +309,7 @@ function PreviewCard({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/5 bg-elevated/40 px-2.5 py-1.5">
+    <div className="rounded-lg border border-hairline bg-elevated/40 px-2.5 py-1.5">
       <p className="font-mono text-2xs uppercase tracking-[0.14em] text-faint">{label}</p>
       <p className="mt-0.5 truncate font-mono text-xs text-primary">{value}</p>
     </div>
