@@ -32,8 +32,13 @@ from preprocessing.stages.cloud_shadow_masking import (
 )
 from preprocessing.stages.noise_reduction import denoise_imagery, denoise_dsm
 from preprocessing.stages.contrast_enhancement import enhance_contrast
-from preprocessing.stages.resolution_handling import resample_to_gsd, align_dataset_to_common_gsd
-from preprocessing.stages.tiling import crop_patches, Patch
+from preprocessing.stages.resolution_handling import resample_to_gsd, align_dataset_to_common_gsd, align_dataset_to_common_gsd_with_semantics
+from preprocessing.stages.tiling import crop_patches, Patch, crop_patches_with_semantics, PatchWithSemantics
+from preprocessing.ingest.training import (
+    load_semantic_tif, load_scene_with_semantics,
+    CALIBRATION_CLASS_GROUND, CALIBRATION_CLASS_BUILDING,
+    CALIBRATION_CLASS_VEGETATION, CALIBRATION_CLASS_UNKNOWN,
+)
 from preprocessing.stages.data_normalisation import (
     compute_dataset_stats, normalize_image, denormalize_image,
     normalize_depth_per_patch, denormalize_depth_per_patch, ChannelStats,
@@ -495,6 +500,141 @@ def test_inference_pipeline_e2e():
         print("  (rasterio not available, skipping GeoTIFF inference test)")
 
 
+def test_semantic_ingest_and_tiling():
+    print("\n-- Semantic Ingest & Tiling --")
+    import rasterio
+    from rasterio.transform import from_origin
+
+    # --- Test load_semantic_tif with RGB-color-coded GeoTIFF ---
+    tmp_sem = os.path.join(tempfile.gettempdir(), "test_semantic_rgb.tif")
+    H, W = 50, 50
+    rgb_arr = np.zeros((3, H, W), dtype=np.uint8)
+    # Top-left quadrant: white (impervious -> GROUND)
+    rgb_arr[:, :25, :25] = np.array([255, 255, 255], dtype=np.uint8)[:, None, None]
+    # Top-right quadrant: blue (building -> BUILDING)
+    rgb_arr[:, :25, 25:] = np.array([0, 0, 255], dtype=np.uint8)[:, None, None]
+    # Bottom-left quadrant: cyan (low_veg -> VEGETATION)
+    rgb_arr[:, 25:, :25] = np.array([0, 255, 255], dtype=np.uint8)[:, None, None]
+    # Bottom-right quadrant: red (clutter -> UNKNOWN)
+    rgb_arr[:, 25:, 25:] = np.array([255, 0, 0], dtype=np.uint8)[:, None, None]
+
+    transform = from_origin(500000.0, 5400000.0, 0.09, 0.09)
+    with rasterio.open(
+        tmp_sem, "w", driver="GTiff",
+        height=H, width=W, count=3, dtype="uint8",
+        crs="EPSG:32633", transform=transform,
+    ) as dst:
+        for i in range(3):
+            dst.write(rgb_arr[i], i + 1)
+
+    labels, gsd = load_semantic_tif(tmp_sem)
+    check("semantic load shape correct", labels.shape == (H, W))
+    check("semantic load GSD correct", abs(gsd - 0.09) < 1e-6)
+    check("semantic white -> GROUND", np.all(labels[:25, :25] == CALIBRATION_CLASS_GROUND))
+    check("semantic blue -> BUILDING", np.all(labels[:25, 25:] == CALIBRATION_CLASS_BUILDING))
+    check("semantic cyan -> VEGETATION", np.all(labels[25:, :25] == CALIBRATION_CLASS_VEGETATION))
+    check("semantic red -> UNKNOWN", np.all(labels[25:, 25:] == CALIBRATION_CLASS_UNKNOWN))
+    os.remove(tmp_sem)
+
+    # --- Test load_scene_with_semantics GSD mismatch ---
+    tmp_img = os.path.join(tempfile.gettempdir(), "test_sem_img.tif")
+    tmp_dsm = os.path.join(tempfile.gettempdir(), "test_sem_dsm.tif")
+    tmp_sem_bad = os.path.join(tempfile.gettempdir(), "test_sem_bad.tif")
+
+    transform_09 = from_origin(500000.0, 5400000.0, 0.09, 0.09)
+    transform_05 = from_origin(500000.0, 5400000.0, 0.05, 0.05)  # different GSD
+
+    # Write imagery
+    img_data = np.random.randint(0, 2048, (H, W, 3), dtype=np.uint16)
+    with rasterio.open(
+        tmp_img, "w", driver="GTiff",
+        height=H, width=W, count=3, dtype="uint16",
+        crs="EPSG:32633", transform=transform_09,
+    ) as dst:
+        for i in range(3):
+            dst.write(img_data[..., i], i + 1)
+
+    # Write DSM (matching GSD)
+    dsm_data = np.random.rand(H, W).astype(np.float32)
+    with rasterio.open(
+        tmp_dsm, "w", driver="GTiff",
+        height=H, width=W, count=1, dtype="float32",
+        crs="EPSG:32633", transform=transform_09,
+    ) as dst:
+        dst.write(dsm_data, 1)
+
+    # Write semantic with DIFFERENT GSD
+    with rasterio.open(
+        tmp_sem_bad, "w", driver="GTiff",
+        height=H, width=W, count=3, dtype="uint8",
+        crs="EPSG:32633", transform=transform_05,
+    ) as dst:
+        for i in range(3):
+            dst.write(rgb_arr[i], i + 1)
+
+    try:
+        load_scene_with_semantics(tmp_img, tmp_dsm, tmp_sem_bad)
+        check("GSD mismatch raises ValueError", False, "should have raised")
+    except ValueError:
+        check("GSD mismatch raises ValueError", True)
+
+    for f in [tmp_img, tmp_dsm, tmp_sem_bad]:
+        os.remove(f)
+
+    # --- Test align_dataset_to_common_gsd_with_semantics ---
+    imagery_arr = np.random.rand(64, 64, 3).astype(np.float32)
+    dsm_arr = np.random.rand(64, 64).astype(np.float32)
+    mask_arr = np.ones((64, 64), dtype=bool)
+    semantic_arr = np.zeros((64, 64), dtype=np.uint8)
+    semantic_arr[:32, :] = CALIBRATION_CLASS_GROUND
+    semantic_arr[32:, :] = CALIBRATION_CLASS_BUILDING
+
+    aligned = align_dataset_to_common_gsd_with_semantics(
+        imagery_arr, dsm_arr, mask_arr, semantic_arr, 0.09, 0.09
+    )
+    check("aligned has semantic key", "semantic" in aligned)
+    check("aligned semantic shape matches imagery",
+          aligned["semantic"].shape == aligned["imagery"].shape[:2])
+
+    # Check categorical resampling: output should only contain input class IDs
+    unique_out = set(np.unique(aligned["semantic"]).tolist())
+    unique_in = {CALIBRATION_CLASS_GROUND, CALIBRATION_CLASS_BUILDING}
+    check("semantic resampling preserves class IDs only",
+          unique_out.issubset(unique_in),
+          f"got {unique_out}, expected subset of {unique_in}")
+
+    # Test with actual resampling (different source/target GSD)
+    aligned2 = align_dataset_to_common_gsd_with_semantics(
+        imagery_arr, dsm_arr, mask_arr, semantic_arr, 0.09, 0.05
+    )
+    unique_out2 = set(np.unique(aligned2["semantic"]).tolist())
+    check("semantic resampled preserves class IDs (different GSD)",
+          unique_out2.issubset(unique_in),
+          f"got {unique_out2}, expected subset of {unique_in}")
+
+    # --- Test crop_patches_with_semantics ---
+    imagery_t = np.random.rand(256, 256, 3).astype(np.float32)
+    dsm_t = np.random.rand(256, 256).astype(np.float32)
+    mask_t = np.ones((256, 256), dtype=bool)
+    semantic_t = np.zeros((256, 256), dtype=np.uint8)
+    semantic_t[:128, :] = CALIBRATION_CLASS_GROUND
+    semantic_t[128:, :] = CALIBRATION_CLASS_VEGETATION
+
+    patches = crop_patches_with_semantics(
+        imagery_t, dsm_t, mask_t, semantic_t,
+        tile_size=128, stride=128,
+    )
+    check("semantic patches produced", len(patches) > 0)
+    check("semantic patches count correct", len(patches) == 4)
+
+    p0 = patches[0]
+    check("PatchWithSemantics has semantic field", hasattr(p0, 'semantic'))
+    check("semantic patch shape matches imagery",
+          p0.semantic.shape == p0.imagery.shape[:2])
+    check("semantic patch shape is (128,128)",
+          p0.semantic.shape == (128, 128))
+
+
 # ── Main Runner ─────────────────────────────────────────────────────
 
 def main():
@@ -513,6 +653,7 @@ def main():
         test_training_pipeline_e2e,
         test_inference_ingest,
         test_inference_pipeline_e2e,
+        test_semantic_ingest_and_tiling,
     ]
 
     for test_fn in test_functions:

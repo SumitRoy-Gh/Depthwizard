@@ -24,7 +24,7 @@ _MODEL_NAME_BY_SIZE = {
 class DAv2Backbone:
     """Frozen wrapper around the pretrained Depth Anything V2 model."""
 
-    def __init__(self, size: str = "small", device: str | None = None):
+    def __init__(self, size: str = "small", device: str | None = None, frozen: bool = True):
         from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
         if size not in _MODEL_NAME_BY_SIZE:
@@ -36,9 +36,15 @@ class DAv2Backbone:
         self.processor = AutoImageProcessor.from_pretrained(model_name)
         self.model = AutoModelForDepthEstimation.from_pretrained(model_name)
         self.model.to(self.device)
-        self.model.eval()
-        for p in self.model.parameters():
-            p.requires_grad = False
+        self.frozen = frozen
+        if self.frozen:
+            self.model.eval()
+            for p in self.model.parameters():
+                p.requires_grad = False
+        else:
+            self.model.train()
+            for p in self.model.parameters():
+                p.requires_grad = True
 
     @torch.no_grad()
     def predict(self, rgb_uint8: np.ndarray) -> np.ndarray:
@@ -62,6 +68,35 @@ class DAv2Backbone:
         ).squeeze()
 
         return pred.detach().cpu().numpy().astype(np.float32)
+
+    def forward_train(self, rgb_uint8_batch) -> "torch.Tensor":
+        """
+        Training-mode forward pass — returns a (B, H, W) float32 TORCH
+        TENSOR (not numpy, and NOT detached) so gradients can flow back
+        through it during fine-tuning. Only call this when frozen=False.
+
+        rgb_uint8_batch: (B, H, W, 3) numpy uint8 array (a batch of
+        dav2_input images, same format as predict() takes per-image).
+
+        Raises RuntimeError if self.frozen is True, since calling this on
+        a frozen backbone would silently waste compute with no gradient
+        ever reaching the weights — fail loudly instead of a silent no-op.
+        """
+        import torch
+        if self.frozen:
+            raise RuntimeError(
+                "forward_train() called on a frozen DAv2Backbone. "
+                "Construct with frozen=False to fine-tune, or use "
+                "predict() for zero-shot frozen inference."
+            )
+        b, h, w = rgb_uint8_batch.shape[0], rgb_uint8_batch.shape[1], rgb_uint8_batch.shape[2]
+        inputs = self.processor(images=list(rgb_uint8_batch), return_tensors="pt").to(self.device)
+        outputs = self.model(**inputs)
+        pred = outputs.predicted_depth  # (B, h', w')
+        pred = torch.nn.functional.interpolate(
+            pred.unsqueeze(1), size=(h, w), mode="bilinear", align_corners=False
+        ).squeeze(1)
+        return pred  # (B, H, W), gradients attached, still on self.device
 
 
 def run_dav2_inference(rgb_uint8: np.ndarray, size: str = "small", device: str | None = None) -> np.ndarray:

@@ -23,12 +23,8 @@ dist/
 *.egg-info/
 
 # 3. Data Directories & Heavy Raster Files
-# Ignore all raw, synthetic, and intermediate data files
-data/raw/
-data/synthetic/
-data/synthetic_bad_gsd/
-data/processed/
-data/patches/
+# Ignore all raw, synthetic, demo outputs, and intermediate data files
+data/
 sample.tif
 
 # Ignore all standalone geospatial raster binary formats
@@ -73,3 +69,5 @@ frontend/.env*.local
 frontend/*.log
 DOCS/DepthWizard_Technical_Documentation.docx
 DOCS/STATUS.md
+
+*.zip

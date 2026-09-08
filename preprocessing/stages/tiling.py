@@ -72,6 +72,50 @@ def crop_patches(
     return patches
 
 
+@dataclass
+class PatchWithSemantics:
+    imagery: np.ndarray      # (tile_size, tile_size, C)
+    dsm: np.ndarray          # (tile_size, tile_size)
+    valid_mask: np.ndarray   # (tile_size, tile_size) bool
+    semantic: np.ndarray     # (tile_size, tile_size) uint8 class IDs
+    row_off: int
+    col_off: int
+
+
+def crop_patches_with_semantics(
+    imagery: np.ndarray,
+    dsm: np.ndarray,
+    valid_mask: np.ndarray,
+    semantic: np.ndarray,
+    tile_size: int = 512,
+    stride: int | None = None,
+    min_valid_fraction: float = 0.6,
+) -> list[PatchWithSemantics]:
+    h, w = dsm.shape
+    stride = stride or tile_size
+    assert imagery.shape[:2] == (h, w)
+    assert semantic.shape == (h, w)
+
+    patches: list[PatchWithSemantics] = []
+    for r in range(0, max(h - tile_size, 0) + 1, stride):
+        for c in range(0, max(w - tile_size, 0) + 1, stride):
+            img_patch = imagery[r:r + tile_size, c:c + tile_size]
+            dsm_patch = dsm[r:r + tile_size, c:c + tile_size]
+            mask_patch = valid_mask[r:r + tile_size, c:c + tile_size]
+            sem_patch = semantic[r:r + tile_size, c:c + tile_size]
+
+            if img_patch.shape[0] != tile_size or img_patch.shape[1] != tile_size:
+                continue
+
+            valid_fraction = mask_patch.mean() if mask_patch.size else 0.0
+            if valid_fraction < min_valid_fraction:
+                continue
+
+            patches.append(PatchWithSemantics(img_patch, dsm_patch, mask_patch, sem_patch, r, c))
+
+    return patches
+
+
 def split_by_area(
     patches: list[Patch], test_area_row_ranges: list[tuple[int, int]]
 ) -> tuple[list[Patch], list[Patch]]:
