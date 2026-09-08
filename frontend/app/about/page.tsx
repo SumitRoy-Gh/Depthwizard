@@ -1,24 +1,100 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Layers, Cpu, Mountain, GitBranch, Database, AlertTriangle, Sparkles } from "lucide-react";
+import {
+  Mountain,
+  Crosshair,
+  Cpu,
+  GitBranch,
+  Database,
+  AlertTriangle,
+} from "lucide-react";
 import { Pill } from "@/components/shared/Pill";
 
-const STAGES = [
-  { id: "1", title: "Radiometric Correction", desc: "Percentile stretch to uint8 + DAv2 RGB proxy (IR-R-G → R-G-G)." },
-  { id: "2", title: "Cloud & Shadow Masking", desc: "Nodata + perceptual luminance + spectral saturation → boolean valid_mask." },
-  { id: "3", title: "Noise Reduction", desc: "Edge-preserving bilateral filter on imagery; masked median on DSM." },
-  { id: "4", title: "CLAHE Contrast", desc: "Local 8×8 histogram equalization with contrast clipping at β = 2.0." },
-  { id: "5", title: "Resolution Handling", desc: "Align to target GSD (default 0.09 m/px) — bilinear for arrays, NN for masks." },
-  { id: "6", title: "Tiling / Stitching", desc: "512×512 patches; cosine-weighted feathered reconstruction for inference." },
-  { id: "7", title: "Depth Estimation (DAv2)", desc: "Frozen Depth Anything v2 (Base) producing relative depth D_prior." },
-  { id: "8", title: "Correction U-Net", desc: "[RGB, D_prior] → 4-channel input → calibrated metric DSM." },
+const STAGES: {
+  id: string;
+  title: string;
+  desc: string;
+  tag: "preprocess" | "backbone" | "branch" | "mesh" | "evaluate" | null;
+}[] = [
+  {
+    id: "S1",
+    title: "Input & auto-detection",
+    desc: "rasterio parses CRS, geotransform, GSD and RPC tags. Geo reference is retained for the whole run — never discarded.",
+    tag: null,
+  },
+  {
+    id: "S2",
+    title: "Preprocessing",
+    desc: "Seven deterministic stages — radiometric stretch, cloud/shadow mask, denoise, CLAHE, resolution align, tiling, normalize. 94 / 94 tests pass.",
+    tag: "preprocess",
+  },
+  {
+    id: "S3",
+    title: "Depth backbone",
+    desc: "DINOv2 encoder + DPT decoder (Depth Anything V2 init), fine-tuned with RPC-aware pseudo-depth supervision → relative depth d̂.",
+    tag: "backbone",
+  },
+  {
+    id: "S4",
+    title: "The branch",
+    desc: "Non-georeferenced? d̂ is the product (rDSM). Georeferenced? per-region RANSAC against SRTM/Copernicus DEM turns depth into metric heights ẑ, with a confidence flag.",
+    tag: "branch",
+  },
+  {
+    id: "S5",
+    title: "Bias-aware refinement",
+    desc: "Adaptive height bins with a head-tail cut correct the long-tail bias that flattens rare, tall structures.",
+    tag: null,
+  },
+  {
+    id: "S6",
+    title: "DSM & derived products",
+    desc: "Outlier removal, smoothing, gap fill → DSM, nDSM, slope, hillshade and a confidence map.",
+    tag: null,
+  },
+  {
+    id: "S7",
+    title: "Tiled 3D mesh",
+    desc: "LOD heightmap-to-mesh with the original image projected back as texture — the flythrough asset.",
+    tag: "mesh",
+  },
+  {
+    id: "S8",
+    title: "Evaluation",
+    desc: "RMSE / MAE / correlation against LiDAR, broken out by terrain type and region class.",
+    tag: "evaluate",
+  },
 ];
 
 const DATASETS = [
-  { name: "ISPRS Vaihingen", license: "For scientific use, attribution required", note: "Aerial · 9 cm/px · IR-R-G · DSM ground truth" },
-  { name: "ISPRS Potsdam", license: "For scientific use, attribution required", note: "Aerial · 5 cm/px · IR-R-G · DSM ground truth" },
+  { name: "ISPRS Vaihingen", license: "Scientific use, attribution required", note: "Aerial · 9 cm/px · IR-R-G · DSM ground truth" },
+  { name: "ISPRS Potsdam", license: "Scientific use, attribution required", note: "Aerial · 5 cm/px · IR-R-G · DSM ground truth" },
   { name: "DFC2019", license: "Open benchmark", note: "Multi-platform overhead imagery" },
+];
+
+const MODELS = [
+  {
+    name: "Fine-tuned depth backbone",
+    role: "S3 · DINOv2 + DPT",
+    detail:
+      "Depth Anything V2 init, fine-tuned with RPC-aware pseudo-depth supervision (Sat3R-style) so relative depth is valid for overhead imagery, not just ground photos.",
+    icon: Mountain,
+  },
+  {
+    name: "Per-region calibration",
+    role: "S4b · RANSAC vs DEM",
+    detail:
+      "Off-the-shelf segmentation separates ground, building and vegetation; each region gets its own affine fit against SRTM or Copernicus DEM. Metric heights ship with a confidence flag.",
+    icon: Crosshair,
+  },
+  {
+    name: "Bias-aware refinement",
+    role: "S5 · adaptive bins",
+    detail:
+      "Adaptive height bins with a head-tail cut keep tall structures from being flattened by regression to the mean.",
+    icon: Cpu,
+  },
 ];
 
 export default function AboutPage() {
@@ -34,10 +110,9 @@ export default function AboutPage() {
           What DepthWizard is, and isn’t.
         </h1>
         <p className="mt-4 max-w-2xl text-pretty text-base leading-relaxed text-muted">
-          A research demo for monocular single-view height estimation, built on a
-          seven-stage preprocessing pipeline, a frozen foundation model
-          (Depth Anything v2), and a small calibration U-Net. Trained and
-          validated on public aerial benchmarks.
+          A research demo for SIH 26175: one optical image in — a labeled
+          elevation product and an explorable 3D flythrough out. Metric when
+          geo tags exist, relative otherwise, honest either way.
         </p>
       </motion.div>
 
@@ -54,20 +129,21 @@ export default function AboutPage() {
           className="mt-4 grid gap-3"
         >
           {STAGES.map((s, i) => (
-            <div
-              key={s.id}
-              className="glass flex items-start gap-4 rounded-2xl p-4"
-            >
-              <span className="font-mono text-lg tabular-nums text-faint">
+            <div key={s.id} className="glass flex items-start gap-4 rounded-2xl p-4">
+              <span className="mt-0.5 font-mono text-sm tabular-nums text-faint">
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div className="flex-1">
-                <p className="font-medium text-primary">{s.title}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium text-primary">{s.title}</p>
+                  {s.tag && (
+                    <Pill tone={s.tag === "backbone" || s.tag === "branch" ? "cyan" : "muted"}>
+                      {s.tag}
+                    </Pill>
+                  )}
+                </div>
                 <p className="mt-1 text-sm text-muted">{s.desc}</p>
               </div>
-              {i < 6 && <Pill tone="muted">preprocess</Pill>}
-              {i === 6 && <Pill tone="cyan">DAv2</Pill>}
-              {i === 7 && <Pill tone="cyan">U-Net</Pill>}
             </div>
           ))}
         </motion.div>
@@ -77,23 +153,18 @@ export default function AboutPage() {
       <section className="mb-12">
         <h2 className="flex items-center gap-2 font-mono text-2xs uppercase tracking-[0.18em] text-cyan">
           <Cpu className="h-3.5 w-3.5" />
-          Models
+          Model stack
         </h2>
-
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <ModelCard
-            name="Depth Anything v2 (Base)"
-            role="Frozen feature extractor"
-            detail="Outputs relative monocular depth D_prior. Trained on a large natural-image corpus. We do not fine-tune."
-            icon={Mountain}
-          />
-          <ModelCard
-            name="Correction U-Net"
-            role="Trainable calibration head"
-            detail="Learns H_pred = a·D_prior + b + R(I, D) from 4-channel [RGB, D_prior] input on aerial imagery + LiDAR pairs."
-            icon={Layers}
-          />
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {MODELS.map((m) => (
+            <ModelCard key={m.name} name={m.name} role={m.role} detail={m.detail} icon={m.icon} />
+          ))}
         </div>
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
+          Technique novelty is not claimed — every method is adopted from cited
+          published work. Our contribution is the integration: auto-routing,
+          the observable pipeline, and the interactive 3D layer.
+        </p>
       </section>
 
       {/* Datasets */}
@@ -106,7 +177,7 @@ export default function AboutPage() {
         <div className="mt-4 grid gap-3">
           {DATASETS.map((d) => (
             <div key={d.name} className="glass rounded-2xl p-4">
-              <div className="flex items-baseline justify-between gap-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="font-medium text-primary">{d.name}</p>
                 <Pill tone="muted">{d.license}</Pill>
               </div>
