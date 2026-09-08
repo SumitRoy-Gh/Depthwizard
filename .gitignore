@@ -36,7 +36,7 @@ sample.tif
 *.png.aux.xml
 
 # 4. Model Checkpoints & Statistics
-*.pt
+.pt
 *.pth
 *.ckpt
 *.onnx
@@ -69,3 +69,5 @@ frontend/.env*.local
 frontend/*.log
 
 *.zip
+*.pdf
+*.docx
