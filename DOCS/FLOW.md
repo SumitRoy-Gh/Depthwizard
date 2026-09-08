@@ -1,7 +1,7 @@
 # DepthWizard — Flow
 
-**Project:** SIH175 — Single-View Height Estimation & 3D Flythrough
-**Status:** Draft v1.0
+**Project:** SIH Problem Statement 26175 — Single-View Height Estimation & 3D Flythrough
+**Status:** v2.0 — synced with `DOCS/DepthWizard_Technical_Documentation.docx` (canonical 8-stage workflow)
 
 ---
 
@@ -9,7 +9,7 @@
 
 ```
                         ┌──────────────┐
-                        │  / (Landing) │
+                        │  / (Landing) │   light · minimal · no WebGL
                         └──────┬───────┘
                                │ upload + click "Generate"
                                ▼
@@ -20,107 +20,114 @@
                          │             │
                 success  │             │ failure
                          ▼             ▼
-            ┌────────────────────┐   ┌──────────────────┐
-            │ /results/:jobId    │   │ Error state on   │
-            │ (2D + 3D viewer)   │   │ /processing page │
-            └──┬─────────────┬───┘   │ with retry CTA   │
-               │             │       └──────────────────┘
-       compare │             │ download
-               ▼             ▼
-   ┌───────────────────┐   (file download)
-   │ .../compare       │
-   │ raw vs corrected  │
-   └───────────────────┘
+             ┌────────────────────┐   ┌──────────────────┐
+             │ /results/:jobId    │   │ Error state on   │
+             │ (2D + 3D viewer)   │   │ /processing page │
+             └──┬─────────────┬───┘   │ with retry CTA   │
+                │             │       └──────────────────┘
+        compare │             │ download
+                ▼             ▼
+    ┌───────────────────┐   (file download)
+    │ .../compare       │
+    │ raw vs corrected  │
+    └───────────────────┘
 
-   ┌────────────┐  ┌──────────┐  ┌──────────────┐
-   │ /history   │  │ /about   │  │ /settings    │
-   └────────────┘  └──────────┘  └──────────────┘
+    ┌────────────┐  ┌──────────┐  ┌──────────────┐
+    │ /history   │  │ /about   │  │ /settings    │
+    └────────────┘  └──────────┘  └──────────────┘
 ```
 
 ---
 
-## 2. End-to-End Happy Path (Demo Mode)
+## 2. End-to-End Happy Path (Georeferenced Input — Demo Mode)
 
 ```
 [User lands on /]
    ↓
-Background Earth slowly rotates (Three.js canvas, behind UI)
-Particle field drifts in foreground
-Header logo fades in: "DepthWizard"
-Headline types in: "From one image, a 3D world."
+LIGHT minimal landing (paper background, dot-grid texture, ink typography)
+Sections reveal domino-style as the user scrolls:
+   hero → what-it-does grid → 8-step pipeline → terminal log →
+   why-single-view → upload studio → codeblock CTA
+Headline settles in with a word-reveal; no globe, no WebGL on this route
    ↓
-[User drags an image onto the page]
+[User drags an image onto the drop zone]
    ↓
 Client validation (< 200ms)
-   • Extension check ✓
-   • Size check ✓
-   • geotiff.js peek → "Georeferenced ✓" or "Not georeferenced"
+   • Extension check ✓ (.tif/.tiff/.png/.jpg/.jpeg)
+   • Size check ✓ (warn > 200 MB)
+   • geotiff.js peek → "Georeferenced ✓" or "Not georeferenced" badge
    ↓
-Preview card slides up: thumbnail + badge + "Generate Height Model" button
+Preview card slides up: thumbnail + badge + "Generate Height Model"
    ↓
 [User clicks "Generate Height Model"]
    ↓
 POST /ingest (multipart) → backend starts job → returns jobId
    ↓
-Route transition (Framer Motion shared layout): page morphs into stepper
-Navigate to /processing/:jobId
+Route transition → /processing/:jobId (dark cinematic theme resumes)
    ↓
-Backend runs pipeline (polled via /jobs/:id/status, 1.5s cadence):
-   • Stage 1 Radiometric       ─ on complete → emit event + thumbnail
-   • Stage 2 Cloud/Shadow      ─ on complete → emit event + valid_mask thumb
-   • Stage 3 Noise Reduction   ─ on complete → emit event
-   • Stage 4 CLAHE             ─ on complete → emit event
-   • Stage 5 Resolution        ─ on complete or skipped → emit event
-   • Stage 6 DAv2 (frozen)     ─ emits D_prior thumbnail
-   • Stage 7 Correction U-Net  ─ emits H_pred thumbnail (metric)
+Backend runs the canonical workflow (polled via /jobs/:id/status, 1.5s):
+   • S1  Input & auto-detection     → emits meta event (CRS, GSD, RPC?)
+   • S2  Preprocessing (7-stage)    → emits per-substage thumbnails
+   • S3  Depth backbone (fine-tuned DINOv2+DPT) → emits d̂ thumbnail
+   • S4  BRANCH (georef) 4b         → segmentation + per-region RANSAC
+                                       vs DEM → emits ẑ thumbnail
+                                       + DEM cross-check confidence flag
+   • S5  Bias-aware refinement      → emits refined h(x) thumbnail
+   • S6  DSM & derived products     → DSM, nDSM, slope, hillshade, confidence
+   • S7  Tiled/LOD mesh + texture   → emits mesh preview thumbnail
    ↓
 Stepper animates each stage; thumbnails fade in
-"Estimated time remaining: 18s" appears after stage 2
+"Estimated time remaining" appears after S2
    ↓
 status === "complete"
    ↓
-Cinema-mode transition: 600ms cross-fade to /results/:jobId
+Transition to /results/:jobId
    ↓
 [Results page mounts]
-   • Left: 2D map (MapLibre if georeferenced; canvas otherwise) with viridis overlay
-   • Right: 3D flythrough with auto-orbit
+   • Left: 2D map (MapLibre if georeferenced; canvas otherwise) with viridis
+     overlay + confidence-map toggle
+   • Right: 3D flythrough of the tiled/LOD mesh with auto-orbit
+   • Metadata strip: CRS, GSD, metric-vs-relative badge, confidence summary
 "Fly this path" CTA pulses once
    ↓
 [User clicks "Fly this path"]
    ↓
 Scripted camera path plays (12s): rise → orbit → dive → pan
-Bloom + vignette intensify during cinematic
    ↓
 Path completes; manual controls re-enabled
    ↓
 [User clicks "Compare raw vs corrected"]
    ↓
-Side-by-side compare view: slider compare with synced zoom
+Side-by-side compare view: slider compare (raw d̂ vs calibrated ẑ)
    ↓
-[User downloads OBJ via Download menu]
+[User downloads artifacts via Download menu]
    ↓
-GET /jobs/:id/download/mesh → signed URL → file saved
+GET /jobs/:id/download/{type} → signed URL → file saved
+(DSM GeoTIFF, nDSM/slope/hillshade, mesh GLB/OBJ, heightmap PNG, JSON)
 ```
 
 ---
 
-## 3. Non-Georeferenced Input Flow
+## 3. Non-Georeferenced Input Flow (S4a branch)
 
 ```
-Same as happy path until /processing/:jobId completes
+Same as happy path until /processing/:jobId
+   ↓
+S1 reports is_georeferenced = false → event stream takes the 4a branch
+   • S4b (DEM calibration) is SKIPPED — shown as "not applicable:
+     relative product"
+   • S5 refinement still runs (relative heights, bias-corrected)
    ↓
 On /results/:jobId:
-   • Right panel: 3D flythrough (same as happy path)
+   • Right panel: 3D flythrough of the relative surface (same as happy path)
    • Left panel: plain canvas (NOT MapLibre map)
    • Persistent amber badge top-left:
      "Relative height only — this image wasn't georeferenced,
       so heights are not in real-world units."
    • GeoTIFF download item: DISABLED with tooltip
      "Unavailable: input image was not georeferenced"
-   • OBJ/GLB download item: enabled
-   • PNG heightmap download item: enabled
-   • PDF report: enabled, but includes relative-only notice
-   • Stage 5 (Resolution) shown as "skipped — no GSD available"
+   • Mesh GLB/OBJ, heightmap PNG: enabled
+   • Confidence map: cloud/shadow flag only (no DEM cross-check channel)
 ```
 
 ---
@@ -135,58 +142,59 @@ Client validation passes (looks like a valid extension)
 POST /ingest succeeds, returns jobId
    ↓
 On /processing/:jobId:
-   • Stages 1-2 complete normally
-   • Stage 3 (Noise reduction) fails:
+   • S1–S2 sub-stages complete normally
+   • S3 (depth backbone) fails:
      backend returns stage=3, status=failed,
-     reason="Bilateral filter diverged on sparse valid_mask"
+     reason="Backbone tile inference diverged on masked tile #12"
    ↓
 Frontend stepper freezes; failed stage shows red ✗ + plain-language reason
 "Try another image" CTA pulses
-"View technical log" disclosure expands to show stack trace
+"View technical log" disclosure expands to show the stack trace
    ↓
 No automatic redirect; user stays on processing page until they act
+```
+
+Degradation flows (honest, never silent):
+
+```
+DEM fetch fails (S4b)          → job continues as RELATIVE product
+                                 + amber "metric calibration unavailable" badge
+Segmentation low-quality (S4b) → confidence map flags those regions
+Large scene (S7)               → tiled/LOD mesh keeps frame budget; UI notes LOD
 ```
 
 ---
 
 ## 5. Session History Flow
 
-```
-[User completes a run → navigates away]
-   ↓
-On next visit to /:
-   • localStorage retains last 10 runs
-   • "Recent uploads" strip appears below drop zone
-   ↓
-[User clicks /history in nav]
-   ↓
-Grid of result cards: thumbnail, timestamp, georef badge, metric/relative badge
-Click card → navigate to /results/:jobId
-"Clear history" button at top-right with confirmation modal
-```
-
 ---
 
 ## 6. Visual / Animation Flow Details
 
-### 6.1 Landing Page First Paint
+### 6.1 Landing Page First Paint (light theme, no WebGL)
 
 | Time | Element | Animation |
 |------|---------|-----------|
-| 0ms | Background globe canvas | Mounted, DPR=0.75 |
-| 0ms | Particle field | Mounted, static |
-| 100ms | Logo | Fade + slight rise, 240ms |
-| 200ms | Headline | Type-in (split by chars), 600ms |
-| 400ms | Sub-headline | Fade in, 240ms |
-| 600ms | Drop zone | Scale from 0.96 → 1, fade, 320ms |
-| 1200ms | Sample thumbnails | Stagger in, 80ms apart |
+| 0ms | Paper background + dot-grid texture | Static (paint cost ~0) |
+| 80ms | Header wordmark + nav | Fade + slight rise, 240ms |
+| 150ms | Eyebrow pill row | Stagger in, 60ms apart |
+| 250ms | Headline | Word-reveal (masked rise), 700ms |
+| 600ms | Lede paragraph | Fade + rise, 500ms |
+| 750ms | CTA pair | Fade + rise, 500ms |
+| 900ms | Stat row | Stagger in, 80ms apart |
 
-### 6.2 Page Transitions
-All route changes use a **shared layout animation** via Framer Motion `layoutId`:
-- Card-to-page transitions morph the thumbnail into a fullscreen image.
-- 480ms ease-in-out-cubic.
+### 6.2 Domino Section Reveals (Odysseus-style)
 
-### 6.3 Cinematic Camera Path (Flythrough) — 12s
+- Every landing section is wrapped in a reveal container: `opacity 0 → 1`, `translateY(24px) → 0`, 600ms, fired **once** when ~20% of the section enters the viewport.
+- Feature cards inside a revealed section cascade in with 50ms stagger (domino effect).
+- The pipeline step row animates its connecting line left→right on first reveal.
+- Terminal log lines "type in" sequentially with a blinking caret on the active line.
+- All reveals respect `prefers-reduced-motion` (collapse to 80ms opacity-only).
+
+### 6.3 Page Transitions
+Route changes stay simple (fade/slide, 240ms) — the landing is light, app pages are dark; a full-viewport morph between themes would feel broken.
+
+### 6.4 Cinematic Camera Path (Flythrough) — 12s
 
 | t (s) | Camera Position | LookAt | Notes |
 |-------|----------------|--------|-------|
@@ -197,55 +205,51 @@ All route changes use a **shared layout animation** via Framer Motion `layoutId`
 | 10.0 | (-30, 30, 30) | (0, 6, 0) | Pull back to reveal |
 | 12.0 | (0, 60, 80) | (0, 0, 0) | Return to start view |
 
-Easing: ease-in-out-cubic per segment. Bloom intensity ramps up 0.3 → 0.6 → 0.3.
-
-### 6.4 Earth Background (Landing + Idle Pages)
-- Procedural sphere with day-texture + cloud overlay (cloud sphere rotates 1.4× faster than surface).
-- Subtle atmospheric rim glow (Fresnel shader).
-- Auto-rotates at 0.04 rad/s.
-- Slow camera dolly: 60s period sine wave, ±2 units on z-axis.
-- Star/dot field surrounds it; dots parallax with mouse movement.
-
-### 6.5 3D Height Mesh
-- Geometry: `PlaneGeometry(100, 100, n, n)` where n ≤ 512.
-- Vertex Z displaced by normalized height × exaggeration slider × 5 world units.
-- Material: `MeshStandardMaterial` with viridis-color vertex attribute, `flatShading: false`, `roughness: 0.6`.
-- Optional wireframe overlay toggle (debug mode).
 
 ---
 
-## 7. Backend Pipeline Data Flow (Inference)
+## 7. Backend Data Flow (Inference — canonical 8-stage)
 
 ```
 Upload (multipart)
    │
    ▼
-ingest/inference.py :: load_inference_image()
-   ├─ rasterio → GeoTIFF → (H,W,C) + InferenceImageMeta{is_georeferenced, crs, gsd_m, ...}
+S1 ingest/inference.py :: load_inference_image()
+   ├─ rasterio → GeoTIFF → (H,W,C) + meta{is_georeferenced, crs, gsd_m, rpc?, ...}
    └─ PIL fallback → PNG/JPG → (H,W,3) uint8 + meta{is_georeferenced=False}
-   │
+   │     (CRS/geotransform retained for the whole pipeline — never discarded)
    ▼
-pipelines/inference.py :: preprocess_for_inference()
-   │
-   ├─ Stage 1 radiometric  → {unet_input uint8, dav2_input uint8}
-   ├─ Stage 2 masking      → valid_mask bool
-   ├─ Stage 3 noise        → bilateral-filtered uint8
-   ├─ Stage 4 CLAHE        → enhanced uint8
-   ├─ Stage 5 resolution   → GSD-aligned (skipped if no GSD)
-   └─ Stage 6 normalize    → float32 (uses training stats.json)
-   │
+S2 pipelines/inference.py :: preprocess_for_inference()        [7 sub-stages]
+   ├─ radiometric   → {backbone_input uint8, proxy RGB}
+   ├─ masking       → valid_mask bool (retained, not discarded)
+   ├─ noise         → bilateral-filtered uint8
+   ├─ CLAHE         → enhanced uint8
+   ├─ resolution    → GSD-aligned (skipped if no GSD — reported, not silent)
+   ├─ tiling        → 512² patches (+ windowed inference, cosine stitch)
+   └─ normalize     → float32 zero-mean (training stats.json)
    ▼
-Model Layer
-   ├─ DAv2(dav2_input)         → D_prior (H,W) float32
-   └─ U-Net([RGB, D_prior])    → H_pred  (H,W) float32 metric DSM
-   │
+S3 ml/backbone (fine-tuned DINOv2+DPT, DAv2 init)
+   └─ → d̂ (H,W) float32 relative depth      ← first "prediction" artifact
+   ▼
+BRANCH
+   ├─ 4a non-georeferenced: d̂ IS the height product (rDSM) → skip to S6
+   └─ 4b georeferenced:
+        segmentation s(x) → per-region RANSAC (a_c, b_c) vs DEM z_ref
+        ẑ(x) = a_{s(x)}·d̂(x) + b_{s(x)}   +   DEM cross-check confidence flag
+   ▼
+S5 ml/refine (adaptive bins + head-tail cut) → h(x) final height surface
+   ▼
+S6 products: outlier removal → smoothing → gap fill
+   → DSM (+ nDSM, slope, hillshade) + confidence map (cloud flag ∪ DEM check)
+   ▼
+S7 tiled/LOD mesh + RGB texture projection
    ▼
 Artifacts
-   ├─ GLB / OBJ mesh
+   ├─ DSM GeoTIFF (georef only) + nDSM / slope / hillshade PNGs
+   ├─ GLB / OBJ mesh (tiled/LOD)
    ├─ PNG heightmap (viridis)
-   ├─ GeoTIFF (only if metric)
-   ├─ PDF report
-   └─ JSON metadata (CRS, GSD, processing time, confidence)
+   ├─ Confidence map (PNG + channel in metadata)
+   └─ JSON metadata (CRS, GSD, branch taken, stage timings, confidence)
 ```
 
 ---
@@ -254,15 +258,40 @@ Artifacts
 
 | Breakpoint | Behavior |
 |------------|----------|
-| ≥ 1280px | Full two-panel results page; Earth background fullscreen |
-| 768–1279px | Two-panel stacks vertically; Earth scales down |
-| < 768px | Single-column; 3D flythrough deferred behind "Load 3D view" button; Earth replaced with static gradient backdrop |
+| ≥ 1280px | Full two-panel results page; landing sections at max-width 7xl |
+| 768–1279px | Results panels stack vertically; landing grids drop to 2 columns |
+| < 768px | Single-column; 3D flythrough deferred behind "Load 3D view" button; feature grid → 1 column; terminal log scrollable |
 
 ---
 
 ## 9. Accessibility Flows
-- All interactive elements keyboard-reachable; focus rings use cyan accent.
+
+- All interactive elements keyboard-reachable; focus rings use the accent color of the active theme.
 - Drop zone has a `<input type="file">` fallback activated by Enter/Space.
 - 3D viewer has keyboard alternatives: arrow keys for orbit, +/- for zoom.
-- All animations respect `prefers-reduced-motion`: animations disabled or shortened to 80ms cross-fades.
+- All animations respect `prefers-reduced-motion`: reveals collapse to 80ms cross-fades; camera path disabled.
+- Metric-vs-relative and georef/non-georef states are first-class visible badges — never tooltips, never color-only.
+- Landing light theme holds WCAG AA contrast (ink #14171C on paper #FAFAF9 ≈ 15.9:1; accent teal #0E7490 on paper ≈ 4.8:1).
 - Colormaps chosen for colorblind safety (viridis).
+Easing: ease-in-out-cubic per segment. Skipped entirely under `prefers-reduced-motion`.
+
+### 6.5 3D Height Mesh (Tiled / LOD — S7)
+
+- The DSM is converted to spatial tiles; each tile carries precomputed detail levels; the renderer swaps coarser geometry for distant tiles (standard terrain-rendering practice).
+- Vertex Z displaced by normalized height × exaggeration slider × 5 world units.
+- Material: `MeshStandardMaterial` with viridis-color vertex attribute; original RGB image projected as texture (toggle between "height color" and "photo texture").
+- Optional wireframe overlay toggle (debug mode).
+
+```
+[User completes a run → navigates away]
+   ↓
+On next visit to /:
+   • localStorage retains last 10 runs
+   • "Recent runs" strip appears in the studio section
+   ↓
+[User clicks /history in nav]
+   ↓
+Grid of result cards: thumbnail, timestamp, georef badge, metric/relative badge
+Click card → navigate to /results/:jobId
+"Clear history" button at top-right with confirmation modal
+```
