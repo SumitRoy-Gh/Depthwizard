@@ -1,8 +1,8 @@
 # DepthWizard — Status & Phase Plan
 
-**Project:** SIH175 — Single-View Height Estimation & 3D Flythrough
-**Status:** v1.1 — Live tracker, refreshed after frontend milestone
-**Last updated:** 2026-08-30
+**Project:** SIH Problem Statement 26175 — Single-View Height Estimation & 3D Flythrough
+**Status:** v1.2 — re-based on the corrected architecture (`DOCS/DepthWizard_Technical_Documentation.docx`)
+**Last updated:** 2026-09-08
 
 ---
 
@@ -26,9 +26,9 @@ Each phase below has a status, a checklist of sub-tasks, and an owner field. As 
 
 # Track A — Backend / ML
 
-## Phase A0 — Preprocessing Engine ✅ COMPLETE
+## Phase A0 — Preprocessing Engine ✅ COMPLETE (canonical stage S2)
 
-**Goal:** A fully-tested, deterministic 7-stage preprocessing pipeline that handles training imagery+DSM pairs and single-image inference.
+**Goal:** A fully-tested, deterministic 7-stage preprocessing pipeline that handles training imagery+DSM pairs and single-image inference. Unaffected by the architecture correction — it IS canonical stage S2.
 
 | # | Task | Status | Owner |
 |---|------|--------|-------|
@@ -53,31 +53,33 @@ Each phase below has a status, a checklist of sub-tasks, and an owner field. As 
 | A0.19 | 94-test suite (`tests/test_all.py`) — all passing | 🟢 | Backend |
 | A0.20 | Real-raster test harness (`tests/test_real_tif.py`) | 🟢 | Backend |
 
-## Phase A1 — DAv2 Integration ✅ COMPLETE
+## Phase A1 — Depth Backbone Fine-Tuning (S3) 🔄 RESCOPED
 
-**Goal:** Per `DOCS/next-step.md` — integrate DAv2 as a frozen model that takes `dav2_input` → `D_prior`.
-
-| # | Task | Status | Owner |
-|---|------|--------|-------|
-| A1.1 | Bundle / load pre-trained DAv2 Base checkpoint | 🟡 | ML — weights acquisition in progress |
-| A1.2 | Implement frozen forward pass (`eval()`, `torch.no_grad()`) | 🟡 | ML — module wired, awaiting weights for e2e test |
-| A1.3 | Wire DAv2 into inference pipeline (`dav2_input` → `D_prior`) | 🟡 | ML — interface defined, real weights swap pending |
-| A1.4 | Confirm `D_prior` shape `(H, W)` float32 | 🟢 | ML — contract documented in `types/api.ts` + mock backend |
-| A1.5 | Tests: DAv2 input/output shapes, deterministic given fixed weights | 🔴 | ML — depends on real weights |
-
-## Phase A2 — Correction U-Net
-
-**Goal:** Train and serve a small U-Net that maps `[RGB, D_prior]` (4-channel) → metric DSM.
+**Goal:** Per the corrected architecture (Gap G1) — fine-tune the DINOv2+DPT backbone (Depth Anything V2 init) with RPC-aware pseudo-depth supervision (Sat3R method). The v1 "frozen DAv2" plan is retired.
 
 | # | Task | Status | Owner |
 |---|------|--------|-------|
-| A2.1 | Define U-Net architecture (encoder + decoder with skip connections) | 🔴 | ML |
-| A2.2 | Loss functions (per `DOCS/next-step.md` §4: `H_pred = a·D_prior + b + R(I,D)`) | 🔴 | ML |
-| A2.3 | Training loop on Vaihingen + Potsdam (paired imagery+DSM) | 🔴 | ML |
-| A2.4 | Spatial area-based split (no leakage — `split_by_area`) | 🔴 | ML |
-| A2.5 | Validation: RMSE against LiDAR ground truth | 🔴 | ML |
-| A2.6 | Serialize weights; integrate as second inference stage | 🔴 | ML |
-| A2.7 | Output metric DSM with CRS preserved | 🔴 | ML |
+| A1.1 | Acquire DAv2 / DINOv2+DPT pretrained weights | 🟡 | ML |
+| A1.2 | Build RPC-aware pseudo-depth supervision (`d_rpc`) per Sat3R construction | 🔴 | ML |
+| A1.3 | Fine-tuning loop (SiLog / L1 loss vs `d_rpc`) on Vaihingen+Potsdam+DFC2019 | 🔴 | ML |
+| A1.4 | Tile inference export: `d̂ (H,W) float32` relative depth | 🔴 | ML |
+| A1.5 | Shape/determinism tests for the backbone forward pass | 🔴 | ML |
+
+## Phase A2 — Geometry-Aware Calibration & Bias Refinement (S4b + S5) 🔄 RESCOPED
+
+**Goal:** Replace the v1 "Correction U-Net" with the corrected design: per-region RANSAC calibration against a reference DEM (Gap G2) + adaptive-bin head-tail-cut refinement (Gap G3).
+
+| # | Task | Status | Owner |
+|---|------|--------|-------|
+| A2.1 | Select off-the-shelf semantic segmentation model (ground/building/vegetation) | 🔴 | ML |
+| A2.2 | DEM fetch + co-registration (SRTM / Copernicus, cached server-side) | 🔴 | ML |
+| A2.3 | Per-region RANSAC fit `(a_c, b_c)` vs `z_ref`; full-scene `ẑ(x)` | 🔴 | ML |
+| A2.4 | DEM cross-check → confidence flag | 🔴 | ML |
+| A2.5 | Adaptive-bins + head-tail-cut refinement head (HTC-DC method) | 🔴 | ML |
+| A2.6 | Spatial area-based split (no leakage) + RMSE/MAE/corr vs LiDAR by terrain & class | 🔴 | ML |
+| A2.7 | Serialize weights; expose as pipeline stages S3/S4b/S5 | 🔴 | ML |
+
+> **v1.1 history:** the frozen-DAv2 + 4-channel Correction U-Net tasks (A1.*, A2.* in v1.1) are retired — the architecture correction (technical documentation, Gaps G1–G3) supersedes them. The 94-test preprocessing engine (A0) is unaffected and maps to canonical stage S2.
 
 ## Phase A3 — Job Orchestration & API
 
@@ -102,12 +104,13 @@ Each phase below has a status, a checklist of sub-tasks, and an owner field. As 
 
 | # | Task | Status | Owner |
 |---|------|--------|-------|
-| A4.1 | GLB / OBJ mesh export | 🔴 | Backend |
+| A4.1 | GLB / OBJ mesh export (tiled/LOD geometry, S7) | 🔴 | Backend |
 | A4.2 | PNG heightmap export (viridis / terrain colormap) | 🔴 | Backend |
-| A4.3 | GeoTIFF export (gated on `is_georeferenced`) | 🔴 | Backend |
-| A4.4 | PDF report generation (results summary + dataset credit) | 🔴 | Backend |
-| A4.5 | Confidence / uncertainty channel (if model exposes one) | 🔴 | ML |
-| A4.6 | Metadata JSON: CRS, GSD, model variant, processing time | 🔴 | Backend |
+| A4.3 | DSM GeoTIFF export (gated on `is_georeferenced`) | 🔴 | Backend |
+| A4.4 | Derived products: nDSM, slope, hillshade (S6) | 🔴 | Backend |
+| A4.5 | Confidence map (cloud/shadow flag ∪ DEM cross-check) + summary channel | 🔴 | ML + Backend |
+| A4.6 | Metadata JSON: CRS, GSD, branch taken (S4a/S4b), stage timings, confidence | 🔴 | Backend |
+| A4.7 | PDF report generation (results summary + dataset credit) | ⚪ | Deferred |
 
 ---
 
@@ -275,11 +278,29 @@ Each phase below has a status, a checklist of sub-tasks, and an owner field. As 
 |---|------|--------|-------|
 | B9.1 | Batch upload | ⚪ | Future |
 | B9.2 | User accounts + persistent multi-session history | ⚪ | Future |
-| B9.3 | Light theme | ⚪ | Future |
-| B9.4 | PWA / offline support | ⚪ | Future |
-| B9.5 | E2E tests (Playwright) | ⚪ | Future |
-| B9.6 | Real-time collaborative viewing | ⚪ | Future |
-| B9.7 | In-browser fine-tuning playground | ⚪ | Future |
+| B9.3 | PWA / offline support | ⚪ | Future |
+| B9.4 | E2E tests (Playwright) | ⚪ | Future |
+| B9.5 | Real-time collaborative viewing | ⚪ | Future |
+| B9.6 | In-browser fine-tuning playground | ⚪ | Future |
+
+## Phase B10 — Landing Redesign v2 (light, minimal, no WebGL) 🟡 IN PROGRESS
+
+**Goal:** Replace the dark globe-hero landing with a light, minimalist, professional landing (inspired by odysseus-dev.github.io/odysseus): domino section reveals, dot-grid texture, cascading capability grid, terminal-style pipeline log, codeblock CTA. Zero WebGL on `/`. Driven by the corrected architecture + PRD v2 visual language.
+
+| # | Task | Status | Owner |
+|---|------|--------|-------|
+| B10.1 | Token theming: RGB-triplet CSS variables + Tailwind `<alpha-value>` + `.theme-light` route scope | 🟡 | Frontend |
+| B10.2 | Light backdrop variant (dot grid + soft tints) replacing starfield on `/` | 🔴 | Frontend |
+| B10.3 | Remove 3D globe (HeroScene) from landing; delete component | 🔴 | Frontend |
+| B10.4 | New hero: light, centered, word-reveal headline, CTAs, stat row | 🔴 | Frontend |
+| B10.5 | Capability grid with domino cascade (Odysseus-style) | 🔴 | Frontend |
+| B10.6 | Canonical 8-step pipeline visualization (S1–S8 + S4 branch) | 🔴 | Frontend |
+| B10.7 | Terminal-style pipeline log mockup with staged reveal + copy | 🔴 | Frontend |
+| B10.8 | "Why single-view" story section (disaster-response framing) | 🔴 | Frontend |
+| B10.9 | Codeblock CTA with copy-to-clipboard + pill row | 🔴 | Frontend |
+| B10.10 | Restyle upload studio components (DropZone, SampleTiles, AdvancedOptions, RecentUploads, telemetry strip) for light theme | 🔴 | Frontend |
+| B10.11 | Header/Footer theme adaptation via tokens (no visual change on dark pages) | 🔴 | Frontend |
+| B10.12 | Typecheck + production build green; verify dark pages unchanged | 🔴 | Frontend |
 
 ---
 
@@ -320,12 +341,15 @@ Each phase below has a status, a checklist of sub-tasks, and an owner field. As 
 | 2026-08-30 | MapLibre over Mapbox | No API key = no demo-stage failure mode |
 | 2026-08-30 | R3F over raw Three.js | Declarative scene graph + drei ecosystem |
 | 2026-08-30 | No backend coupling to specific persistence | Session = localStorage only |
-| 2026-08-30 | DAv2 frozen, separate Correction U-Net | DAv2 generalization preserved; U-Net specializes in metric calibration |
 | 2026-08-30 | Strict 7-stage ordering preserved | Mathematically fixed; reordering degrades quality |
-| 2026-08-30 | HTTP polling (1.2s) for status, not websocket | Simpler; sufficient cadence for UX |
+| 2026-08-30 | HTTP polling (1.5s) for status, not websocket | Simpler; sufficient cadence for UX |
 | 2026-08-30 | Frontend ships against mock backend (`frontend/lib/mock-api.ts`) | Lets UI/UX iterate independently of ML pipeline completion; swap is two lines of code |
 | 2026-08-30 | Monorepo (frontend/ in same repo as preprocessing/) | Atomic commits, shared types, single CI, single deploy URL family |
-| 2026-08-30 | Per-stage thumbnail is a real R3F scene (not a placeholder PNG) | Demonstrates pipeline transparency rather than faking it; uses procedural geometry keyed to the stage's character |
+| 2026-09-08 | **Adopt corrected architecture** — fine-tuned backbone (S3), per-region RANSAC vs DEM (S4b), bias-aware refinement (S5) | Technical documentation gaps G1–G3; frozen-DAv2 + Correction U-Net retired |
+| 2026-09-08 | **Light minimal landing, dark app pages** (CSS-variable tokens + `.theme-light` route scope) | Professional first impression; calm where users decide, cinematic where they explore |
+| 2026-09-08 | **Remove 3D globe from landing**; zero WebGL on `/` | Landing = clarity + performance; 3D belongs to results |
+| 2026-09-08 | Datasets: DFC2019 + Vaihingen + Potsdam (drop SpaceNet/WorldStrat/LEVIR-NVS) | Gap G4 — original picks contain no elevation ground truth |
+| 2026-09-08 | Novelty discipline in all public claims | Integration + routing + deployment is our contribution; techniques are cited |
 
 ---
 
@@ -338,6 +362,7 @@ Each phase below has a status, a checklist of sub-tasks, and an owner field. As 
 | 2026-08-30 | Frontend track (B0–B9) + Cross-track (C1–C2) added | Frontend |
 | 2026-08-30 | Frontend B0–B7, B8.1, B8.5, B8.9–B8.13 marked complete — Next.js + Three.js + R3F + MapLibre shipped against mock backend | Frontend |
 | 2026-08-30 | Status doc reformatted to v1.1 with three explicit tracks, completion markers, and accurate deferral notes | Frontend |
+| 2026-09-08 | v1.2 — re-based on corrected architecture; A1/A2 rescoped (fine-tuning + calibration/refinement), A4 extended (nDSM/slope/hillshade/confidence), B10 landing-redesign phase opened; ARCHITECTURE/FLOW/TECHSTACK/PRD synced to docs v2 | Frontend |
 
 ---
 
@@ -345,13 +370,14 @@ Each phase below has a status, a checklist of sub-tasks, and an owner field. As 
 
 | Track | Phase | Status |
 |-------|-------|--------|
-| A — Backend / ML | A0 Preprocessing engine | ✅ Complete |
-| A — Backend / ML | A1 DAv2 integration | 🟡 Module wired, weights pending |
-| A — Backend / ML | A2 Correction U-Net | 🔴 Not started |
+| A — Backend / ML | A0 Preprocessing engine (S2) | ✅ Complete — 94/94 tests |
+| A — Backend / ML | A1 Depth backbone fine-tuning (S3) | 🔄 Rescoped — weights pending (ML) |
+| A — Backend / ML | A2 Calibration + bias refinement (S4b+S5) | 🔄 Rescoped — not started (ML) |
 | A — Backend / ML | A3 Job orchestration & API | 🔴 Not started |
 | A — Backend / ML | A4 Output artifacts | 🔴 Not started |
 | B — Frontend | B0–B7 | ✅ Complete |
 | B — Frontend | B8 Polish | 🟡 In progress (5 done, 5 open) |
 | B — Frontend | B9 Stretch | ⚪ Deferred |
+| B — Frontend | B10 Landing redesign v2 | 🟡 In progress |
 | C — Integration | C1 End-to-end | 🔴 Blocked on A3 |
 | C — Integration | C2 Demo prep | 🔴 Blocked on A1+A3 |
