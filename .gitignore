@@ -36,7 +36,7 @@ sample.tif
 *.png.aux.xml
 
 # 4. Model Checkpoints & Statistics
-*.pt
+.pt
 *.pth
 *.ckpt
 *.onnx
@@ -71,3 +71,5 @@ DOCS/DepthWizard_Technical_Documentation.docx
 DOCS/STATUS.md
 
 *.zip
+*.pdf
+*.docx

@@ -7,6 +7,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 
+from preprocessing.ingest.training import load_scene
 from preprocessing.pipelines.training import process_scene
 from preprocessing.stages.tiling import split_by_area
 from depth_estimation.finetune_dataset import DAv2FineTuneDataset, collate_finetune_batch
@@ -58,7 +59,21 @@ def main():
     
     all_patches = []
     for img_path, dsm_path in pairs:
-        patches = process_scene(str(img_path), str(dsm_path), target_gsd=args.target_gsd, patch_size=args.tile_size)
+        imagery, dsm, meta = load_scene(str(img_path), str(dsm_path))
+        
+        print(f"[Debug] {img_path.name}: source_gsd_m = {meta.gsd_m}")
+        if meta.gsd_m is None or meta.gsd_m > 0.5:
+            print(f"[Warning] Suspicious GSD ({meta.gsd_m}) for {img_path.name} — assuming missing georeferencing. Hard-coding known Vaihingen GSD (0.09m).")
+            meta.gsd_m = 0.09
+
+        patches = process_scene(
+            raw_ir_r_g=imagery, 
+            raw_dsm=dsm, 
+            source_gsd_m=meta.gsd_m, 
+            target_gsd_m=args.target_gsd, 
+            tile_size=args.tile_size,
+            verbose=False,
+        )
         all_patches.extend(patches)
         
     if not all_patches:
