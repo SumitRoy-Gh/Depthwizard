@@ -24,7 +24,7 @@ _MODEL_NAME_BY_SIZE = {
 class DAv2Backbone:
     """Frozen wrapper around the pretrained Depth Anything V2 model."""
 
-    def __init__(self, size: str = "small", device: str | None = None, frozen: bool = True):
+    def __init__(self, size: str = "small", device: str | None = None, frozen: bool = True, weights_path: str | None = None):
         from transformers import AutoImageProcessor, AutoModelForDepthEstimation
 
         if size not in _MODEL_NAME_BY_SIZE:
@@ -35,7 +35,10 @@ class DAv2Backbone:
 
         self.processor = AutoImageProcessor.from_pretrained(model_name)
         self.model = AutoModelForDepthEstimation.from_pretrained(model_name)
+        if weights_path is not None:
+            self.model.load_state_dict(torch.load(weights_path, map_location=self.device))
         self.model.to(self.device)
+
         self.frozen = frozen
         if self.frozen:
             self.model.eval()

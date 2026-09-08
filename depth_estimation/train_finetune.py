@@ -60,6 +60,12 @@ def main():
     all_patches = []
     for img_path, dsm_path in pairs:
         imagery, dsm, meta = load_scene(str(img_path), str(dsm_path))
+        
+        print(f"[Debug] {img_path.name}: source_gsd_m = {meta.gsd_m}")
+        if meta.gsd_m is None or meta.gsd_m > 0.5:
+            print(f"[Warning] Suspicious GSD ({meta.gsd_m}) for {img_path.name} — assuming missing georeferencing. Hard-coding known Vaihingen GSD (0.09m).")
+            meta.gsd_m = 0.09
+
         patches = process_scene(
             raw_ir_r_g=imagery, 
             raw_dsm=dsm, 
