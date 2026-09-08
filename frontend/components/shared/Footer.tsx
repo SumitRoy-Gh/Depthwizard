@@ -48,7 +48,7 @@ export function Footer() {
         </div>
         <div className="mt-10 flex flex-col gap-2 border-t border-hairline pt-5 text-2xs text-faint md:flex-row md:items-center md:justify-between">
           <span className="font-mono uppercase tracking-[0.16em]">
-            © 2026 DepthWizard · Built for SIH 26175 hackathon demo
+            © 2026 DepthWizard
           </span>
           <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <span className="font-mono uppercase tracking-[0.16em]">

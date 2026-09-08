@@ -27,7 +27,7 @@ export default function ComparePage() {
             </p>
           </div>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-primary md:text-3xl">
-            Raw DAv2 vs. corrected U-Net
+            Raw depth vs. calibrated heights
           </h1>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Pill tone="muted">Before / After</Pill>
@@ -54,7 +54,7 @@ export default function ComparePage() {
         <Note
           tone="cyan"
           label="What changed"
-          text="DAv2 produces relative monocular depth — values are scale-ambiguous. The Correction U-Net learns an affine recalibration plus a residual that corrects flat-ground misjudgments near tall structures."
+          text="The depth backbone produces relative depth — values are scale-ambiguous. Calibration re-scales it region by region (per-region RANSAC against a reference DEM when georeferenced), plus bias-aware refinement that corrects flat-ground misjudgments near tall structures."
         />
         <Note
           tone="amber"
@@ -64,7 +64,7 @@ export default function ComparePage() {
         <Note
           tone="emerald"
           label="Why this matters"
-          text="Without the U-Net, the heightmap looks plausible but the absolute scale and the metric calibration are wrong. This view proves the correction step is doing real work."
+          text="Without calibration, the heightmap looks plausible but the absolute scale is wrong. This view proves the calibration step is doing real work."
         />
       </motion.div>
     </div>

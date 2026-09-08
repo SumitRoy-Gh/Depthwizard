@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description:
     "Turn a single overhead image into a labeled elevation product and an interactive 3D flythrough — metric or relative, always honest. Built for SIH 26175.",
   applicationName: "DepthWizard",
-  authors: [{ name: "SIH 175 Team" }],
+  authors: [{ name: "DepthWizard" }],
   keywords: [
     "DepthWizard",
     "single-view height estimation",

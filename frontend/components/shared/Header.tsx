@@ -26,7 +26,7 @@ export function Header() {
               DepthWizard
             </span>
             <span className="mt-0.5 font-mono text-2xs uppercase tracking-[0.18em] text-faint">
-              SIH 175 · v0.1
+              single-view · 3D
             </span>
           </div>
         </Link>

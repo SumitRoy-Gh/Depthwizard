@@ -2,7 +2,7 @@
 
 > **From one image, a 3D world.**
 >
-> Single-view monocular height estimation + interactive 3D flythrough, built for **SIH 175** (Smart India Hackathon problem 175).
+> Single-view height estimation + interactive 3D flythrough. Built by the **DepthWizard** team for **SIH 26175** — ISRO / Department of Space, Disaster Management.
 
 [![Branch](https://img.shields.io/badge/branch-feat%2Fclient-22D3EE?style=flat-square)]()
 [![Frontend](https://img.shields.io/badge/frontend-Next.js%2014-22D3EE?style=flat-square)]()
@@ -10,7 +10,7 @@
 [![Status](https://img.shields.io/badge/preprocessing-94%2F94%20tests%20passing-10B981?style=flat-square)]()
 [![Status](https://img.shields.io/badge/frontend-shipped%20(mock%20backend)-F59E0B?style=flat-square)]()
 
-Drop a single overhead image. Watch a deterministic, 7-stage preprocessing pipeline prepare it. A frozen monocular foundation model produces a relative depth map. A small Correction U-Net calibrates that into a metric DSM. The result rises out of the canvas in twelve seconds — drag to orbit, click **Fly this path** for a cinematic camera tour.
+Drop a single overhead image. A deterministic 7-stage preprocessing engine cleans it, a fine-tuned depth backbone estimates relative height, and — when the image carries geo tags — per-region calibration against a reference DEM turns that into metric elevation. The result rises out of the canvas in under ninety seconds: drag to orbit, click **Fly this path** for a cinematic camera tour.
 
 ---
 
@@ -36,7 +36,7 @@ DepthWizard is a research demo that turns a single 2D overhead image (`.tif`, `.
 
 - A **3D heightmap mesh** — displaced plane with viridis/terrain vertex coloring, ready to fly around
 - A **2D heightmap overlay** — MapLibre map (if georeferenced) or canvas fallback (if not)
-- A **raw vs corrected comparison** — slider view of Depth Anything v2 output versus the Correction U-Net output
+- A **raw vs calibrated comparison** — slider view of raw relative depth versus the final corrected height surface
 - **Downloadable artifacts** — GLB mesh, PNG heightmap, GeoTIFF (metric-only), PDF report
 
 The system serves two audiences that pull in different directions and the product serves both:
@@ -102,8 +102,8 @@ Honesty is a feature of this codebase. See [`DOCS/STATUS.md`](./DOCS/STATUS.md) 
 │                                  ▼                                       │
 │   ┌────────────────────────────────────────────────────────────────┐    │
 │   │  Models                                                           │    │
-│   │  ├─ Depth Anything v2 (frozen) → D_prior  (H, W) float32        │    │
-│   │  └─ Correction U-Net          → H_pred   (H, W) metric DSM       │    │
+│   │  ├─ Fine-tuned depth backbone (DINOv2+DPT) → d̂   (H, W) rel    │    │
+│   │  └─ Per-region RANSAC vs reference DEM  → ẑ    (metric DSM)     │    │
 │   └────────────────────────────────────────────────────────────────┘    │
 │                                  │                                       │
 │                                  ▼                                       │
@@ -180,8 +180,8 @@ You need **Python 3.14+** (`uv` recommended) and **Node.js 20+** (`npm`).
 
 ```bash
 # 1. Clone
-git clone <repo-url> sih175
-cd sih175
+git clone <repo-url> depthwizard
+cd depthwizard
 
 # 2. Backend — preprocessing tests (94 tests, ~5 seconds)
 uv sync
@@ -267,10 +267,10 @@ When `NEXT_PUBLIC_DEMO_MODE=true` (default), the frontend uses `frontend/lib/moc
 
 | Route | Purpose |
 |---|---|
-| `/` | Landing + upload + sample tiles + 3D hero scene |
-| `/processing/:jobId` | Live 7-stage stepper + per-stage 3D thumbnails |
+| `/` | Landing + upload + sample tiles + interactive showcase |
+| `/processing/:jobId` | Live 8-stage stepper + per-stage thumbnails |
 | `/results/:jobId` | 2D map + 3D flythrough + controls + downloads |
-| `/results/:jobId/compare` | Raw DAv2 vs corrected U-Net slider |
+| `/results/:jobId/compare` | Raw depth vs calibrated height slider |
 | `/history` | Session-scoped past runs (localStorage) |
 | `/about` | Model + dataset + honest-scope |
 | `/settings` | Display / export / pipeline preferences |
@@ -296,8 +296,9 @@ Both ISPRS datasets require attribution for scientific use; the project credits 
 
 Models used:
 
-- **Depth Anything v2 (Base)** — pre-trained monocular depth foundation model from the Depth Anything team. Used frozen as a feature extractor.
-- **Correction U-Net** — small custom U-Net, trained on Vaihingen + Potsdam imagery+DSM pairs, mapping `[RGB, D_prior]` → metric DSM per [`DOCS/next-step.md`](./DOCS/next-step.md) §4.
+- **Fine-tuned depth backbone** — DINOv2 encoder + DPT decoder, initialized from Depth Anything V2 and fine-tuned with RPC-aware pseudo-depth supervision (Sat3R-style) for overhead geometry.
+- **Per-region calibration** — off-the-shelf semantic segmentation + per-region RANSAC against SRTM / Copernicus DEM (metric branch only).
+- **Bias-aware refinement** — adaptive height bins with a head-tail cut that keeps tall structures tall.
 
 ---
 
@@ -323,17 +324,17 @@ Models used:
 - [x] 7-stage preprocessing pipeline (radiometric → masking → denoise → CLAHE → resolution → tiling → normalization)
 - [x] 94/94 preprocessing tests passing
 - [x] Inference ingest with GeoTIFF auto-detection
-- [x] DAv2 frozen-feature-extractor module (awaiting real weights for full e2e test)
+- [x] Fine-tuned depth backbone blueprint (weights owned by the ML track)
 - [x] Full Next.js frontend with 3D flythrough, MapLibre, 7 routes
 - [x] Cinematic 12-second camera path ("Fly this path")
 - [x] Per-stage 3D thumbnails on the processing page
 - [x] Raw vs corrected comparison view
 - [x] Session-scoped history with localStorage persistence
-- [x] `prefers-reduced-motion` respected, dark cinematic theme
+- [x] Light landing + light informational pages; dark cinematic app theme; `prefers-reduced-motion` respected
 
 ### In progress
 
-- [ ] Correction U-Net training + integration (see [`DOCS/STATUS.md`](./DOCS/STATUS.md) §A2)
+- [ ] Depth backbone fine-tuning + calibration pipeline (see [`DOCS/STATUS.md`](./DOCS/STATUS.md) §A1–A2)
 - [ ] Backend API service (FastAPI) with job orchestration (see §A3)
 - [ ] Real artifact exports (GLB, GeoTIFF, PDF) from backend (see §A4)
 
@@ -341,7 +342,6 @@ Models used:
 
 - [ ] Batch upload
 - [ ] User accounts + multi-session history
-- [ ] Light theme
 - [ ] PWA / offline support
 - [ ] E2E tests (Playwright)
 - [ ] Vercel deployment
@@ -350,7 +350,7 @@ Models used:
 
 ## License
 
-This project is built for the **Smart India Hackathon 2026** (Problem 175). All rights reserved by the SIH 175 team unless explicitly stated otherwise.
+This project is built by the **DepthWizard** team for **SIH 26175** (Smart India Hackathon 2026 — ISRO / Department of Space, Disaster Management). All rights reserved by the DepthWizard team unless explicitly stated otherwise.
 
 The third-party models and datasets used retain their original licenses:
 
@@ -363,5 +363,5 @@ The third-party models and datasets used retain their original licenses:
 ---
 
 <p align="center">
-  <sub>Built for SIH 175 · Dark cinematic · Viridis-only colormaps · No purple gradients · 2026</sub>
+  <sub>DepthWizard · Built for SIH 26175 · Light landing / dark app · Viridis-only colormaps · No purple gradients · 2026</sub>
 </p>
