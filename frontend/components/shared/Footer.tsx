@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="relative mt-24 border-t border-white/5 bg-gradient-to-b from-transparent to-void/80">
+    <footer className="relative mt-24 border-t border-hairline bg-gradient-to-b from-transparent to-void/80">
       <div className="mx-auto grid max-w-7xl gap-8 px-6 py-12 md:grid-cols-4">
         <div className="md:col-span-2">
           <p className="text-sm font-medium text-primary">DepthWizard</p>
@@ -32,7 +32,7 @@ export function Footer() {
           </ul>
         </div>
       </div>
-      <div className="mx-auto flex max-w-7xl flex-col gap-2 border-t border-white/5 px-6 py-4 text-2xs text-faint md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto flex max-w-7xl flex-col gap-2 border-t border-hairline px-6 py-4 text-2xs text-faint md:flex-row md:items-center md:justify-between">
         <span className="font-mono uppercase tracking-[0.16em]">
           © SIH 175 · Built for hackathon demo · 2026
         </span>

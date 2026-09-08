@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 import { BackgroundCanvas } from "@/components/three/BackgroundCanvas";
+import { ThemeShell } from "@/components/shared/ThemeShell";
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
 
@@ -53,6 +54,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
+        {/* Pre-paint theme: light on the landing route (no dark flash). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(location.pathname==='/')document.documentElement.classList.add('theme-light')}catch(e){}",
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
@@ -63,11 +71,11 @@ export default function RootLayout({
       <body className="relative min-h-screen antialiased">
         <BackgroundCanvas />
         <Providers>
-          <div className="relative z-10 flex min-h-screen flex-col">
+          <ThemeShell>
             <Header />
             <main className="flex-1">{children}</main>
             <Footer />
-          </div>
+          </ThemeShell>
         </Providers>
       </body>
     </html>

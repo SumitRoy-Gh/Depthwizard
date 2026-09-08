@@ -46,7 +46,7 @@ export function Header() {
                 {active && (
                   <motion.span
                     layoutId="nav-pill"
-                    className="absolute inset-0 -z-10 rounded-full bg-elevated ring-1 ring-white/10"
+                    className="absolute inset-0 -z-10 rounded-full bg-elevated ring-1 ring-hairline"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -62,7 +62,7 @@ export function Header() {
               Demo · mock backend
             </div>
           )}
-          <div className="hidden items-center gap-2 rounded-full border border-white/5 bg-elevated/70 px-3 py-1.5 font-mono text-2xs uppercase tracking-[0.16em] text-muted lg:flex">
+          <div className="hidden items-center gap-2 rounded-full border border-hairline bg-elevated/70 px-3 py-1.5 font-mono text-2xs uppercase tracking-[0.16em] text-muted lg:flex">
             <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald/60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald" />
@@ -100,7 +100,12 @@ function LogoMark() {
         <circle cx="18" cy="18" r="13" fill="none" stroke="rgba(34,211,238,0.4)" strokeWidth="0.6" strokeDasharray="2 3" />
         <circle cx="18" cy="18" r="8" fill="none" stroke="rgba(16,185,129,0.5)" strokeWidth="0.6" />
         <circle cx="18" cy="18" r="4" fill="url(#logoCore)" />
-        <circle cx="18" cy="18" r="2" fill="#fff" />
+        <circle
+          cx="18"
+          cy="18"
+          r="2"
+          style={{ fill: "rgb(var(--tw-primary))" }}
+        />
       </svg>
       <div className="absolute -inset-1 -z-10 rounded-full bg-cyan/20 blur-md opacity-0 transition-opacity group-hover:opacity-100" />
     </div>

@@ -20,7 +20,7 @@ export function Pill({
     amber: "border-amber/30 bg-amber/10 text-amber",
     emerald: "border-emerald/30 bg-emerald/10 text-emerald",
     rose: "border-rose/30 bg-rose/10 text-rose",
-    muted: "border-white/10 bg-white/5 text-muted",
+    muted: "border-rim bg-elevated/60 text-muted",
   };
   return (
     <span
@@ -57,7 +57,7 @@ export function StatChip({
     emerald: "text-emerald",
   }[tone];
   return (
-    <div className="flex flex-col gap-0.5 rounded-lg border border-white/5 bg-elevated/40 px-3 py-2 backdrop-blur">
+    <div className="flex flex-col gap-0.5 rounded-lg border border-hairline bg-elevated/40 px-3 py-2 backdrop-blur">
       <span className="font-mono text-2xs uppercase tracking-[0.16em] text-faint">{label}</span>
       <span className={cn("font-mono text-sm font-medium tabular-nums", toneClass)}>{value}</span>
     </div>
