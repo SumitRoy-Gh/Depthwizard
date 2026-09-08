@@ -39,7 +39,6 @@ export default function HomePage() {
       <ScrollProgress />
       <Hero />
       <Marquee />
-      <Capabilities />
       <Showcase />
       <Story />
       <Studio />
@@ -193,66 +192,7 @@ function SectionHead({
   );
 }
 
-/* =========================== CAPABILITIES =========================== */
 
-const CAPABILITIES = [
-  {
-    icon: <FileImage className="h-5 w-5" strokeWidth={1.6} />,
-    title: "One image, any format",
-    body: "GeoTIFF keeps its CRS and GSD; a plain JPEG or PNG becomes a relative surface. Inputs are routed automatically — no configuration.",
-  },
-  {
-    icon: <ShieldCheck className="h-5 w-5" strokeWidth={1.6} />,
-    title: "Height, honestly labeled",
-    body: "Metric or relative is a first-class badge — never a footnote. GeoTIFF export lights up only when absolute heights are possible.",
-  },
-  {
-    icon: <Crosshair className="h-5 w-5" strokeWidth={1.6} />,
-    title: "Confidence, not a guess",
-    body: "A reference-DEM cross-checkand cloud/shadow flags tell you where the result is solid — and where it is not. Failures are visible, never silent.",
-  },
-  {
-    icon: <Box className="h-5 w-5" strokeWidth={1.6} />,
-    title: "A flythrough, not a map",
-    body: "The height surface becomes a tiled 3D mesh, with your image projected back as texture. Orbit, pan, zoom — live.",
-  },
-  {
-    icon: <Layers className="h-5 w-5" strokeWidth={1.6} />,
-    title: "Every stage observable",
-    body: "Live thumbnails per pipeline stage — no black box. The processing page walks you through exactly what happened, step by step.",
-  },
-  {
-    icon: <Check className="h-5 w-5" strokeWidth={1.6} />,
-    title: "Minutes, not afternoons",
-    body: "From drop to flythrough in under 90 seconds. Built for a demo that has to work, live, in front of a room.",
-  },
-];
-
-function Capabilities() {
-  return (
-    <section id="features" className="relative mx-auto max-w-7xl scroll-mt-20 px-6 py-24">
-      <SectionHead
-        eyebrow="What it does"
-        title="Everything a height model owes you"
-        lede="One image in — a validated elevation product and a flythrough out. Every promise it makes is labeled, observable, and verifiable."
-      />
-      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {CAPABILITIES.map((c, i) => (
-          <RevealOnScroll key={c.title} delay={i * 0.05} y={20}>
-            <div className="group relative h-full overflow-hidden rounded-2xl border border-hairline bg-elevated p-6 transition-all duration-300 hover:-translate-y-1 hover:border-cyan/25 hover:shadow-[0_20px_50px_-30px_rgba(20,23,28,0.18)]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan/25 bg-cyan/10 text-cyan transition-colors duration-300 group-hover:bg-cyan group-hover:text-white">
-                {c.icon}
-              </div>
-              <h3 className="mt-4 text-base font-semibold text-primary">{c.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{c.body}</p>
-              <ArrowUpRight className="absolute right-5 top-5 h-4 w-4 text-cyan opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100" />
-            </div>
-          </RevealOnScroll>
-        ))}
-      </div>
-    </section>
-  );
-}
 
 /* ============================= SHOWCASE ============================= */
 
