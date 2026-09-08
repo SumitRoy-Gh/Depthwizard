@@ -283,24 +283,24 @@ Each phase below has a status, a checklist of sub-tasks, and an owner field. As 
 | B9.5 | Real-time collaborative viewing | ⚪ | Future |
 | B9.6 | In-browser fine-tuning playground | ⚪ | Future |
 
-## Phase B10 — Landing Redesign v2 (light, minimal, no WebGL) 🟡 IN PROGRESS
+## Phase B10 — Landing Redesign v2 (light, minimal, no WebGL) ✅ COMPLETE
 
 **Goal:** Replace the dark globe-hero landing with a light, minimalist, professional landing (inspired by odysseus-dev.github.io/odysseus): domino section reveals, dot-grid texture, cascading capability grid, terminal-style pipeline log, codeblock CTA. Zero WebGL on `/`. Driven by the corrected architecture + PRD v2 visual language.
 
 | # | Task | Status | Owner |
 |---|------|--------|-------|
-| B10.1 | Token theming: RGB-triplet CSS variables + Tailwind `<alpha-value>` + `.theme-light` route scope | 🟡 | Frontend |
-| B10.2 | Light backdrop variant (dot grid + soft tints) replacing starfield on `/` | 🔴 | Frontend |
-| B10.3 | Remove 3D globe (HeroScene) from landing; delete component | 🔴 | Frontend |
-| B10.4 | New hero: light, centered, word-reveal headline, CTAs, stat row | 🔴 | Frontend |
-| B10.5 | Capability grid with domino cascade (Odysseus-style) | 🔴 | Frontend |
-| B10.6 | Canonical 8-step pipeline visualization (S1–S8 + S4 branch) | 🔴 | Frontend |
-| B10.7 | Terminal-style pipeline log mockup with staged reveal + copy | 🔴 | Frontend |
-| B10.8 | "Why single-view" story section (disaster-response framing) | 🔴 | Frontend |
-| B10.9 | Codeblock CTA with copy-to-clipboard + pill row | 🔴 | Frontend |
-| B10.10 | Restyle upload studio components (DropZone, SampleTiles, AdvancedOptions, RecentUploads, telemetry strip) for light theme | 🔴 | Frontend |
-| B10.11 | Header/Footer theme adaptation via tokens (no visual change on dark pages) | 🔴 | Frontend |
-| B10.12 | Typecheck + production build green; verify dark pages unchanged | 🔴 | Frontend |
+| B10.1 | Token theming: RGB-triplet CSS variables + Tailwind `<alpha-value>` + `.theme-light` route scope (no-flash inline script) | 🟢 | Frontend |
+| B10.2 | Light backdrop variant (paper wash + dot grid + teal/emerald tints) on `/`; dark starfield elsewhere | 🟢 | Frontend |
+| B10.3 | Remove 3D globe (HeroScene) from landing; component deleted | 🟢 | Frontend |
+| B10.4 | New hero: light, centered, word-reveal headline, CTAs, stat row, scroll cue | 🟢 | Frontend |
+| B10.5 | Capability grid with domino cascade (Odysseus-style) | 🟢 | Frontend |
+| B10.6 | Canonical 8-step pipeline visualization (S1–S8 + S4 branch badges) | 🟢 | Frontend |
+| B10.7 | Terminal-style pipeline log mockup with staged reveal + blinking caret | 🟢 | Frontend |
+| B10.8 | "Why single-view" story section + novelty-statement quote card | 🟢 | Frontend |
+| B10.9 | Copy-to-clipboard affordance (folded into terminal's "copy api call") + pill row CTA | 🟢 | Frontend |
+| B10.10 | Restyle upload studio components (DropZone, SampleTiles, AdvancedOptions, RecentUploads) for light theme | 🟢 | Frontend |
+| B10.11 | Header/Footer/Pill adaptation via tokens; fake-telemetry strip removed (wrong-domain metrics) | 🟢 | Frontend |
+| B10.12 | Typecheck + production build green (`/` static, 170 kB first load, no Three.js); live smoke test passed | 🟢 | Frontend |
 
 ---
 
@@ -363,6 +363,7 @@ Each phase below has a status, a checklist of sub-tasks, and an owner field. As 
 | 2026-08-30 | Frontend B0–B7, B8.1, B8.5, B8.9–B8.13 marked complete — Next.js + Three.js + R3F + MapLibre shipped against mock backend | Frontend |
 | 2026-08-30 | Status doc reformatted to v1.1 with three explicit tracks, completion markers, and accurate deferral notes | Frontend |
 | 2026-09-08 | v1.2 — re-based on corrected architecture; A1/A2 rescoped (fine-tuning + calibration/refinement), A4 extended (nDSM/slope/hillshade/confidence), B10 landing-redesign phase opened; ARCHITECTURE/FLOW/TECHSTACK/PRD synced to docs v2 | Frontend |
+| 2026-09-08 | B10 complete — globe removed, light minimal landing shipped (token theming, domino reveals, pipeline viz, terminal log, story, studio restyle); typecheck + build + live smoke test green | Frontend |
 
 ---
 
@@ -378,6 +379,6 @@ Each phase below has a status, a checklist of sub-tasks, and an owner field. As 
 | B — Frontend | B0–B7 | ✅ Complete |
 | B — Frontend | B8 Polish | 🟡 In progress (5 done, 5 open) |
 | B — Frontend | B9 Stretch | ⚪ Deferred |
-| B — Frontend | B10 Landing redesign v2 | 🟡 In progress |
+| B — Frontend | B10 Landing redesign v2 | ✅ Complete |
 | C — Integration | C1 End-to-end | 🔴 Blocked on A3 |
 | C — Integration | C2 Demo prep | 🔴 Blocked on A1+A3 |
