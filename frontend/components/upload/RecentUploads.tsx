@@ -45,9 +45,9 @@ export function RecentUploads() {
                 <Link
                   key={e.jobId}
                   href={`/results/${e.jobId}`}
-                  className="group flex items-center gap-3 rounded-xl border border-white/8 bg-elevated/30 p-3 transition-all hover:border-cyan/30 hover:bg-elevated/60"
+                  className="group flex items-center gap-3 rounded-xl border border-hairline bg-elevated p-3 transition-all hover:border-cyan/30 hover:shadow-[0_10px_30px_-20px_rgba(20,23,28,0.3)]"
                 >
-                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/5 bg-void">
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-hairline bg-stage">
                     {e.thumbnailDataUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img

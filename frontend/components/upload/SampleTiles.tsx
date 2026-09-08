@@ -50,7 +50,7 @@ const SAMPLES = [
             />
           ))}
         </svg>
-        <div className="absolute inset-0 bg-gradient-to-t from-void/80 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
       </div>
     ),
   },
@@ -91,7 +91,7 @@ const SAMPLES = [
           <line x1="0" y1="100" x2="200" y2="100" stroke="rgba(34,211,238,0.5)" strokeWidth="3" />
           <line x1="100" y1="0" x2="100" y2="200" stroke="rgba(34,211,238,0.5)" strokeWidth="3" />
         </svg>
-        <div className="absolute inset-0 bg-gradient-to-t from-void/80 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
       </div>
     ),
   },
@@ -117,7 +117,7 @@ const SAMPLES = [
           <circle cx="60" cy="140" r="15" fill="rgba(180,120,40,0.4)" stroke="rgba(252,211,77,0.4)" strokeWidth="0.5" />
           <circle cx="100" cy="160" r="10" fill="rgba(180,120,40,0.5)" />
         </svg>
-        <div className="absolute inset-0 bg-gradient-to-t from-void/80 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
       </div>
     ),
   },
@@ -155,11 +155,11 @@ function SampleTile({
       onMouseMove={onMove}
       style={{ rotateX: srx, rotateY: sry, transformStyle: "preserve-3d" }}
       onClick={() => onPick?.(sample.id)}
-      className="group relative overflow-hidden rounded-2xl border border-white/8 bg-elevated/30 text-left transition-all hover:border-cyan/30 hover:shadow-glow"
+      className="group relative overflow-hidden rounded-2xl border border-hairline bg-elevated text-left transition-all hover:border-cyan/30 hover:shadow-glow"
     >
       <div className="relative aspect-[4/3] overflow-hidden">
         {sample.art}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-void via-void/30 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
         <div className="absolute right-2 top-2">
           <Pill tone={sample.tone}>{sample.badge}</Pill>
         </div>

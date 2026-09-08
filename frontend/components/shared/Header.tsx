@@ -16,8 +16,8 @@ export function Header() {
   const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
 
   return (
-    <header className="sticky top-0 z-40">
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-void via-void/85 to-void/0 backdrop-blur-md" />
+    <header className="site-header sticky top-0 z-40">
+      <div className="header-fade absolute inset-0 -z-10 bg-gradient-to-b from-void via-void/85 to-void/0 backdrop-blur-md" />
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="group flex items-center gap-2.5">
           <LogoMark />
@@ -26,7 +26,7 @@ export function Header() {
               DepthWizard
             </span>
             <span className="mt-0.5 font-mono text-2xs uppercase tracking-[0.18em] text-faint">
-              SIH 175 · v0.1
+              single-view · 3D
             </span>
           </div>
         </Link>
@@ -46,7 +46,7 @@ export function Header() {
                 {active && (
                   <motion.span
                     layoutId="nav-pill"
-                    className="absolute inset-0 -z-10 rounded-full bg-elevated ring-1 ring-white/10"
+                    className="absolute inset-0 -z-10 rounded-full bg-elevated ring-1 ring-hairline"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -62,7 +62,7 @@ export function Header() {
               Demo · mock backend
             </div>
           )}
-          <div className="hidden items-center gap-2 rounded-full border border-white/5 bg-elevated/70 px-3 py-1.5 font-mono text-2xs uppercase tracking-[0.16em] text-muted lg:flex">
+          <div className="hidden items-center gap-2 rounded-full border border-hairline bg-elevated/70 px-3 py-1.5 font-mono text-2xs uppercase tracking-[0.16em] text-muted lg:flex">
             <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald/60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald" />
@@ -87,20 +87,24 @@ function LogoMark() {
       <svg viewBox="0 0 36 36" className="h-9 w-9">
         <defs>
           <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#22D3EE" />
-            <stop offset="50%" stopColor="#10B981" />
-            <stop offset="100%" stopColor="#F59E0B" />
+            <stop offset="0%" stopColor="var(--accent-cyan)" />
+            <stop offset="100%" stopColor="var(--accent-emerald)" />
           </linearGradient>
           <radialGradient id="logoCore" cx="0.5" cy="0.5" r="0.5">
-            <stop offset="0%" stopColor="#67E8F9" />
-            <stop offset="100%" stopColor="#0891B2" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--accent-cyan)" />
+            <stop offset="100%" stopColor="var(--accent-cyan)" stopOpacity="0" />
           </radialGradient>
         </defs>
         <circle cx="18" cy="18" r="17" fill="none" stroke="url(#logoGrad)" strokeWidth="1.2" />
-        <circle cx="18" cy="18" r="13" fill="none" stroke="rgba(34,211,238,0.4)" strokeWidth="0.6" strokeDasharray="2 3" />
-        <circle cx="18" cy="18" r="8" fill="none" stroke="rgba(16,185,129,0.5)" strokeWidth="0.6" />
+        <circle cx="18" cy="18" r="13" fill="none" stroke="var(--accent-cyan)" strokeOpacity="0.35" strokeWidth="0.6" strokeDasharray="2 3" />
+        <circle cx="18" cy="18" r="8" fill="none" stroke="var(--accent-emerald)" strokeOpacity="0.5" strokeWidth="0.6" />
         <circle cx="18" cy="18" r="4" fill="url(#logoCore)" />
-        <circle cx="18" cy="18" r="2" fill="#fff" />
+        <circle
+          cx="18"
+          cy="18"
+          r="2"
+          style={{ fill: "rgb(var(--tw-primary))" }}
+        />
       </svg>
       <div className="absolute -inset-1 -z-10 rounded-full bg-cyan/20 blur-md opacity-0 transition-opacity group-hover:opacity-100" />
     </div>

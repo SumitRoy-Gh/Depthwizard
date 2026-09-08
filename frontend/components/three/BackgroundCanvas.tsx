@@ -1,6 +1,30 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+
+/**
+ * Fixed page backdrop. Light dot-grid variant on the landing route ("/"),
+ * dark starfield everywhere else. Pure CSS — zero WebGL on either path.
+ */
 export function BackgroundCanvas() {
+  const pathname = usePathname();
+
+  if (pathname === "/") {
+    return (
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      >
+        {/* Paper wash */}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,#FDFDFC_0%,#FAFAF9_45%,#F4F4F1_100%)]" />
+        {/* Soft brand tints — teal/emerald only */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_45%_at_82%_-5%,rgba(14,116,144,0.08),transparent_60%),radial-gradient(ellipse_55%_40%_at_4%_102%,rgba(5,150,105,0.07),transparent_60%)]" />
+        {/* Dot-grid texture */}
+        <div className="dot-grid absolute inset-0" />
+      </div>
+    );
+  }
+
   return (
     <div
       aria-hidden

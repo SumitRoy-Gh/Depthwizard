@@ -9,7 +9,7 @@ export function AdvancedOptions() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-white/8 bg-elevated/30">
+    <div className="rounded-2xl border border-hairline bg-elevated">
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between gap-2 px-4 py-3 text-sm text-muted transition-colors hover:text-primary"
@@ -32,7 +32,7 @@ export function AdvancedOptions() {
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         className="overflow-hidden"
       >
-        <div className="grid gap-4 border-t border-white/5 p-4 md:grid-cols-3">
+        <div className="grid gap-4 border-t border-hairline p-4 md:grid-cols-3">
           <OptionRow
             label="Target GSD"
             sub="Override default 0.09 m/px"
@@ -70,7 +70,7 @@ export function AdvancedOptions() {
                       "rounded-md border px-2 py-1 font-mono text-2xs uppercase tracking-[0.14em] transition-colors",
                       ["OBJ", "GLB", "PNG"].includes(f)
                         ? "border-cyan/40 bg-cyan/10 text-cyan"
-                        : "border-white/10 bg-white/5 text-muted"
+                        : "border-hairline bg-stage/60 text-muted"
                     )}
                   >
                     {f}
@@ -86,7 +86,7 @@ export function AdvancedOptions() {
 }
 
 const selectClass =
-  "w-full rounded-lg border border-white/10 bg-void/60 px-3 py-2 text-sm text-primary focus:border-cyan focus:outline-none focus:ring-1 focus:ring-cyan/40";
+  "w-full rounded-lg border border-hairline bg-stage/60 px-3 py-2 text-sm text-primary focus:border-cyan focus:outline-none focus:ring-1 focus:ring-cyan/40";
 
 function OptionRow({
   label,

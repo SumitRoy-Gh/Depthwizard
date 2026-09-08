@@ -67,6 +67,8 @@ frontend/out/
 frontend/.env.local
 frontend/.env*.local
 frontend/*.log
+DOCS/DepthWizard_Technical_Documentation.docx
+DOCS/STATUS.md
 
 *.zip
 *.pdf

@@ -117,7 +117,7 @@ export default function HistoryPage() {
                       {e.metric ? "Metric" : "Relative"}
                     </Pill>
                   </div>
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-void via-void/40 to-transparent" />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/25 to-transparent" />
                 </div>
                 <div className="flex items-center justify-between gap-2 p-4">
                   <div className="min-w-0 flex-1">
@@ -134,7 +134,7 @@ export default function HistoryPage() {
                   ev.stopPropagation();
                   remove(e.jobId);
                 }}
-                className="absolute right-2 top-2 hidden rounded-full bg-void/70 p-1.5 text-muted backdrop-blur transition-colors hover:text-rose group-hover:block"
+                className="absolute right-2 top-2 hidden rounded-full bg-white/85 p-1.5 text-muted shadow-sm backdrop-blur transition-colors hover:text-rose group-hover:block"
               >
                 <Trash2 className="h-3 w-3" />
               </button>
