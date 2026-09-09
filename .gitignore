@@ -73,3 +73,5 @@ DOCS/STATUS.md
 *.zip
 *.pdf
 *.docx
+
+*.env

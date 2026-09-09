@@ -1,7 +1,11 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-name = "sih175"
+name = "depthwizard"
 version = "0.1.0"
-description = "Add your description here"
+description = "Single-View Height Estimation and 3D Flythrough from optical imagery."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -14,7 +18,13 @@ dependencies = [
     "torch>=2.5.0",
     "torchvision>=0.20.0",
     "transformers>=4.46.0",
+    "pytest>=8.0.0",
+    "matplotlib>=3.8.0",
+    "Pillow>=10.0.0",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/depthwizard"]
+
 [tool.pyright]
-extraPaths = ["preprocessing"]
+extraPaths = ["src"]

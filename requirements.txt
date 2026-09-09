@@ -1,9 +1,23 @@
-numpy
-scipy
-opencv-python
-rasterio
-scikit-image
-scikit-learn
-torch
-torchvision
-transformers
+# Core Numerical & Geospatial Libraries
+numpy>=2.5.2
+scipy>=1.18.1
+opencv-python>=5.0.0.93
+rasterio>=1.5.1
+scikit-image>=0.26.0
+scikit-learn>=1.6.0
+Pillow>=10.0.0
+
+# Deep Learning & Vision Models
+torch>=2.5.0
+torchvision>=0.20.0
+transformers>=4.46.0
+
+# Visualization & Utilities
+matplotlib>=3.8.0
+
+# Testing & Quality Assurance
+pytest>=8.0.0
+
+# Editable local installation
+-e .
+

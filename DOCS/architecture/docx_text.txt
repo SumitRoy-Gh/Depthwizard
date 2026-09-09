@@ -1,0 +1,348 @@
+DepthWizard
+Single-View Height Estimation and 3D Flythrough
+Complete Research-Backed Technical Documentation
+SIH Problem Statement ID: 26175  |  Organization: ISRO / Department of Space  |  Category: Software  |  Theme: Disaster Management
+Document status: engineering design document. Claims are labeled by evidence type throughout (Part 13). No experimental results for this specific pipeline exist yet — all performance figures are drawn from cited third-party publications, not from our own testing, unless explicitly stated otherwise.
+1. Executive Summary
+This document records the complete technical evolution of the DepthWizard project: the original workflow as first proposed, the technical gaps identified in that workflow, the published research evidence supporting each gap, the corrected workflow, and an honest accounting of what in this project is original engineering integration versus what is adopted directly from existing published research.
+The project addresses ISRO SIH problem statement 26175: estimating Digital Surface Model (DSM) elevation from a single optical image (non-georeferenced or georeferenced) and rendering the result as a navigable 3D flythrough. The core technical difficulty is that monocular depth models are trained on natural, egocentric imagery and produce only relative, scale-ambiguous depth; converting that to metric elevation for overhead/satellite imagery is an open, actively researched problem, not a solved one.
+Three concrete engineering corrections were made to the originally proposed pipeline, each backed by a specific finding in the published literature, not by intuition alone:
+Fine-tune the monocular depth backbone against satellite/RPC geometry instead of freezing it and patching its output afterward (Section 4, Gap G1).
+Replace a single global affine depth-to-height calibration with region-aware, per-class calibration, because a single global scale-and-shift is not physically appropriate under off-nadir viewing geometry (Gap G2).
+Explicitly correct for the long-tailed height distribution (buildings are rare relative to flat ground/background pixels), which causes naive regression networks to systematically underestimate building height (Gap G3).
+Replace three datasets in the original plan (SpaceNet, WorldStrat, LEVIR-NVS) that do not contain elevation ground truth with datasets that do (Gap G4).
+Novelty statement, stated plainly up front: no new model architecture, loss function, or training algorithm is proposed by this project. The monocular-depth backbone, the fine-tuning strategy, the RPC-aware pseudo-depth supervision concept, and the classification-regression height correction are all adopted from specific existing publications, cited throughout. Our contribution is the integration of these existing techniques into a single deployable pipeline for the SIH problem statement, the engineering of the georeferenced/non-georeferenced auto-routing logic, and the interactive 3D visualization/deployment layer. This distinction is treated as mandatory throughout the document (see Part 16).
+2. Problem Statement
+2.1 Official SIH Problem Statement (verbatim summary)
+ID 26175 — "DepthWizard - Single-View Height Estimation and 3D Flythrough", issued by ISRO / Department of Space, Category: Software, Theme: Disaster Management.
+The statement requires an end-to-end pipeline that converts a single-view optical RGB remote-sensing image into a high-precision elevation map, supporting two input regimes:
+Non-georeferenced imagery (PNG/JPG) → output a relative Digital Surface Model (rDSM).
+Georeferenced imagery (GeoTIFF) → output an absolute DSM with metric heights, using a coarse DEM source (e.g. SRTM) or ground control points to convert scale-agnostic depth into metric elevation.
+The stated method requires a pre-trained monocular depth-estimation backbone, a scale-calibration module, and a visualization layer that projects the optical texture onto a 3D terrain mesh with first-person navigation, deployable as a standalone application. Evaluation is 50% DSM accuracy (RMSE/MAE/correlation against LiDAR, across urban/sparse/hilly/forested terrain) and 50% visualization quality (projection accuracy, navigability, stability, standalone deployment).
+2.2 Real-world problem and why it matters
+Elevation data underpins disaster response, urban planning, and infrastructure monitoring. Conventional acquisition (stereo pairs, LiDAR, InSAR) is expensive, sensor-dependent, and slow to deploy at short notice — a serious constraint during time-critical disaster response when only a single archived or freshly tasked optical image may be available. Single-view height estimation is attractive because it needs only one image, but foundational monocular depth models are trained on ground-level, egocentric photography, not overhead remote sensing imagery, and predict depth only up to an unknown scale and shift, not metric height.
+2.3 Why the problem is technically difficult
+Domain gap: natural-image depth models see a systematically different geometry, lighting, and object distribution than nadir/off-nadir satellite images.
+Ill-posedness: recovering 3D structure from one 2D image is fundamentally under-constrained; height must be inferred from monocular cues (shadows, perspective, occlusion, learned priors), not measured.
+Scale ambiguity: relative depth output has no metric meaning; converting it to absolute height requires an external reference (DEM, GCPs, or camera geometry).
+Geometric non-linearity: satellite/aerial sensors are frequently off-nadir; the visible extent of a building's facade versus roof, and the resulting relief displacement, depends on viewing angle and is not a constant multiplicative factor across a scene.
+Long-tailed height distribution: in any given scene the overwhelming majority of pixels are near-zero-height ground; tall structures are statistically rare, which biases naively trained regressors toward underestimating them.
+2.4 What our system aims to achieve
+Expected inputs: Single optical RGB image, PNG/JPG (no metadata) or GeoTIFF (with CRS + geotransform); optional ground control points.
+Expected outputs: Relative DSM (non-georeferenced case) or absolute-height DSM in GeoTIFF plus derived products (nDSM, slope, hillshade, confidence map) for the georeferenced case, and an interactive 3D flythrough of the reconstructed terrain.
+End-to-end objective: Given one image, automatically route it through the correct calibration path and produce both a validated elevation product and a navigable visualization, without manual sensor-specific tuning.
+2.5 Plain-language summary
+Give the system one aerial or satellite photo. It guesses how tall everything in the photo is — buildings, hills, trees — using an AI model that has been taught to understand overhead images specifically. If the photo carries location information, the system checks its guess against freely available rough elevation data (like SRTM) so the heights come out in real metres instead of just “taller/shorter.” Finally, it turns that height map into a 3D scene you can fly through, textured with the original photo.
+2.6 Precise technical summary
+The system performs monocular height estimation from single-view overhead RGB imagery using a domain-adapted vision-transformer depth backbone (DINOv2 encoder + DPT decoder, per Depth Anything V2), fine-tuned with RPC-geometry-derived pseudo-depth supervision when camera model information is available. For georeferenced inputs, region-segmented scale-and-shift regression against a coarse reference DEM (SRTM/Copernicus GLO-30) or ground control points converts relative depth to metric height; a classification-regression refinement stage (adaptive binning, following the head-tail-cut principle) mitigates long-tailed underestimation of vertical structures. The resulting height field is exported as DSM-family geospatial products and converted into a tiled, level-of-detail 3D mesh textured with the source orthomosaic for real-time flythrough rendering.
+3. Existing / Original Workflow (as first proposed)
+This section is preserved as a historical record and is not silently replaced by the corrected workflow in later sections. It documents the six-stage pipeline as originally designed, before the gap analysis in Part 4.
+Datasets originally planned: DFC2019/US3D and ISPRS Vaihingen/Potsdam for training; SRTM 30m / Copernicus GLO-30 / ground control points for calibration reference; and SpaceNet, WorldStrat, and LEVIR-NVS listed under “additional diversity.” The status of each of these is examined in Part 4, Gap G4.
+4. Original Workflow Limitations (Gap Analysis)
+Gaps were discovered by cross-checking each pipeline stage against the published literature on monocular height estimation from remote sensing imagery — a distinct, mature research area, not by informal inspection alone. Four gaps were identified with direct research evidence and one implementation-risk item without a literature citation (flagged as such).
+Note on G5: per the critical research rules, this gap is explicitly labeled as an engineering inference rather than research-validated, since no specific paper was identified establishing it as a documented failure mode for this exact pipeline. It is retained because it is operationally important for the deployment/visualization half of the evaluation criteria.
+Why “keeping the original method” is insufficient for G1–G3, specifically: a post-hoc correction network (G1) can only learn corrections representable within its own limited training data and capacity, and cannot restructure the frozen backbone's internal features; a single global affine fit (G2) is mathematically incapable of representing a spatially-varying (per-object-class) transformation; and a symmetric regression loss (G3) will, by construction, minimize error on the numerically dominant class of pixels (background), which is a property of the loss function, not something that more training data alone corrects.
+5. Research Validation of Each Gap
+Full bibliographic detail for every source cited in this document is consolidated in Part 19. This section summarizes, for each gap, what was specifically checked.
+5.1 Gap G1 — domain gap in frozen backbones
+Source: Yang, Q., Zhou, C., Liu, X., Wang, R., Xu, M., Pesé, M. D., Luo, F., Xu, Y., Cheng, Z., Chen, Q., Qi, H., Huang, S. (2026). “Sat3R: Satellite DSM Reconstruction via RPC-Aware Depth Fine-tuning.” arXiv:2605.07264.
+What it studied: Feed-forward satellite DSM reconstruction using monocular depth foundation models, and how to close the domain gap between natural-image pretraining and the satellite/RPC imaging model.
+Relevant finding: Zero-shot feed-forward geometry foundation models (including Depth Anything V2) do not generalize well to satellite imagery because of the domain gap introduced by the RPC camera model and mismatched depth-scale distributions; the paper's own fix is to fine-tune Depth Anything V2 itself using RPC-derived pseudo-depth supervision and a Scale-Invariant Logarithmic (SiLog) loss, not to post-process a frozen model's output.
+Support for our claim: Direct. This is the specific paper that motivated replacing “frozen backbone + correction net” with “fine-tuned backbone.”
+Caveat: We have not independently re-derived Sat3R's exact quantitative accuracy numbers in this document; readers should consult the paper directly (and its Table 2 ablation, referencing DFC2019) before quoting specific figures in a presentation, per the no-invented-numbers rule.
+5.2 Gap G2 — non-linearity of relief displacement under RPC geometry
+Source: Grodecki, J. & Dial, G. (2003). “Block adjustment of high-resolution satellite images described by rational polynomials.” Photogrammetric Engineering & Remote Sensing, 69(1), 59–68. (Identified via its citation in GeoRay, arXiv:2608.29680, a 2026 satellite 3D-reconstruction paper that explicitly frames RPC geometry as the source of the domain gap Sat3R also addresses.)
+Relevant finding: The RPC (Rational Polynomial Camera) model used for high-resolution satellite sensors is a non-linear, per-pixel mapping between image and ground coordinates, dependent on viewing geometry — not a fixed, scene-wide affine transform.
+Support for our claim: Indirect but load-bearing: this establishes the general geometric principle (image-to-ground mapping is non-linear and geometry-dependent) that our specific claim — “a single global z = a·d + b fit cannot correctly calibrate both flat ground and vertical building facades in the same scene” — follows from. We are not aware of a paper that tests this exact affine-vs-regional-calibration comparison for monocular height estimation specifically, so this gap should be treated as a well-founded geometric argument rather than a directly measured result.
+5.3 Gap G3 — long-tailed height bias
+Source: Chen, S. et al. (2023/2024). “HTC-DC Net: Monocular Height Estimation From Single Remote Sensing Images.” IEEE Transactions on Geoscience and Remote Sensing; arXiv:2309.16486.
+Relevant finding: Stated directly in the abstract: “the distribution of height values is long-tailed with the low-height pixels, e.g., the background, as the head, and thus trained networks are usually biased and tend to underestimate building heights.” The paper addresses this with a classification-regression paradigm (“head-tail cut”, HTC-AdaBins) instead of direct regression, evaluated on ISPRS Vaihingen, DFC2019, and the Global Building Height (GBH) dataset.
+Support for our claim: Direct. This is the specific, named failure mode our bias-aware refinement stage targets, and the specific mitigation strategy (classification-regression / adaptive binning) is adopted, not invented, from this paper.
+5.4 Gap G4 — dataset/task mismatch
+Sources: Van Etten, A., Lindenbaum, D., Bacastow, T. M. (2018). “SpaceNet: A Remote Sensing Dataset and Challenge Series.” arXiv:1807.01232.  |  Cornebise, J., Oršolić, I., Kalaitzis, F. (2022). “Open High-Resolution Satellite Imagery: The WorldStrat Dataset — With Application to Super-Resolution.” NeurIPS 2022 Datasets and Benchmarks Track; arXiv:2207.06418.
+Relevant finding: SpaceNet's own paper describes it as building-footprint-polygon extraction challenges (Las Vegas/Paris/Shanghai/Khartoum, and later Atlanta), with 2D outline labels, not elevation. WorldStrat's own paper describes it as a multi-frame super-resolution dataset pairing Airbus SPOT high-resolution imagery with Sentinel-2 low-resolution imagery, again with no elevation label.
+Support for our claim: Direct, from the datasets' own primary publications.
+Caveat on LEVIR-NVS: We rely on secondary characterization (novel-view-synthesis literature describing it as a small drone-based NVS dataset) rather than having pulled its own primary paper's exact citation into this document. This should be independently re-confirmed with the dataset's own paper/repository before being stated as fact in a judge-facing setting; it is presented here as “likely mismatched” rather than “confirmed mismatched with primary-source citation,” unlike SpaceNet and WorldStrat.
+Recommended replacement: Global Building Height (GBH) dataset, used directly by HTC-DC Net alongside DFC2019 and ISPRS Vaihingen — already a validated, in-domain elevation benchmark rather than a repurposed dataset.
+6. New Workflow and 7. Detailed Stage-by-Stage Technical Explanation
+The new workflow keeps the original seven-stage backbone structure but changes the internal method at Stages 3, 4, and 5, and corrects the dataset list. Each stage below follows the same template.
+Stage 1: Input & Auto-Detection
+Input: Uploaded RGB or GeoTIFF file.
+Operation: Parse file for CRS and geotransform via GDAL/rasterio; check for sidecar world files (.jgw/.pgw) if absent; check GPS EXIF as a fallback; classify as georeferenced / geolocated-only / non-georeferenced.
+Technique/Algorithm: Standard geospatial metadata parsing (GDAL/rasterio); no ML model involved.
+Why this method: This is a deterministic metadata check, not a modeling problem — using a learned classifier here would add failure risk with no benefit.
+Output: Classified image plus (if present) CRS, geotransform, and bounds.
+Gap addressed: Not a gap-fix; unchanged from the original design, since no problem was found here.
+Research basis: Standard GDAL/rasterio usage; not a research claim.
+Failure prevented: Prevents an image without real georeferencing from being incorrectly routed into the metric calibration branch.
+Stage 2: Preprocessing
+Input: Classified image.
+Operation: Radiometric correction, cloud/shadow masking, edge-preserving denoising, resolution matching, tiling, normalization.
+Technique/Algorithm: Standard remote-sensing preprocessing filters.
+Why this method: Unchanged from the original design; these are independent, order-insensitive corrections with no identified gap.
+Output: Cleaned, tiled, normalized tiles at the resolution expected by the depth backbone.
+Gap addressed: Not a gap-fix.
+Research basis: Standard image-processing practice; not a specific research claim.
+Failure prevented: Prevents cloud cover, noise, or resolution mismatch from corrupting the depth backbone's input distribution.
+Stage 3: Fine-Tuned Depth Backbone (replaces ‘frozen backbone + correction U-Net’)
+Input: Preprocessed RGB tile, and (if available) RPC/sensor geometry metadata.
+Operation: A DINOv2 ViT encoder and DPT decoder (Depth Anything V2 architecture) produce raw relative depth. In parallel, RPC sensor geometry is used to construct physically consistent pseudo-depth supervision for the same tile. An L1/SiLog-style loss compares the two, and gradients update the backbone's weights (full or parameter-efficient fine-tuning), not just a downstream correction module.
+Technique/Algorithm: RPC-aware fine-tuning of Depth Anything V2, following Sat3R (Yang et al., 2026).
+Why this method: Directly adopted because it is the specific published method for closing this domain gap; a frozen backbone with only a downstream correction network (the original design) cannot adapt the backbone's own learned features to the satellite domain.
+Output: Domain-adapted relative depth map.
+Gap addressed: Gap G1.
+Research basis: Sat3R, arXiv:2605.07264; Depth Anything V2, Yang et al., arXiv:2406.09414; DINOv2, Oquab et al., arXiv:2304.07193.
+Failure prevented: Reduces systematic depth errors caused by the natural-image-to-satellite-image domain gap, rather than only patching symptoms after the fact.
+Stage 4: Geometry-Aware, Per-Region Scale Calibration (replaces single global affine fit)
+Input: Domain-adapted relative depth (georeferenced branch only; non-georeferenced imagery skips this stage and uses relative depth directly).
+Operation: Fetch a coarse reference DEM (SRTM/Copernicus GLO-30) for the scene extent; optionally incorporate ground control points; segment the scene into region types (ground, building/vertical structure, vegetation) using semantic priors; fit a separate RANSAC scale-and-shift regression per region type instead of one scene-wide fit; apply the resulting per-region calibration; cross-check the result against the coarse DEM and flag large deviations as low-confidence.
+Technique/Algorithm: Per-region robust regression (RANSAC per semantic class) instead of a single global RANSAC fit.
+Why this method: A single affine transform cannot represent the geometry-dependent, per-object-class relationship between relative depth and true height under off-nadir viewing conditions; splitting by region type is the direct, minimal fix that keeps the same underlying robust-regression machinery (RANSAC) while removing its main structural weakness.
+Output: Region-consistent absolute height map (metres), with a confidence flag from the DEM cross-check.
+Gap addressed: Gap G2.
+Research basis: General RPC/photogrammetric-geometry principle (Grodecki & Dial, 2003, as cited in GeoRay, arXiv:2608.29680); semantic segmentation as a standard technique for region-typing (background, not a specific novel claim).
+Failure prevented: Reduces systematic height error on buildings/vertical structures relative to flat terrain, compared with a single global calibration.
+Stage 5: Bias-Aware Height Refinement (new stage; not present in the original workflow)
+Input: Per-region-calibrated absolute (or relative) height map.
+Operation: Bin the continuous height range into adaptive classes (a classification pass), then recover a continuous value by a weighted combination of bin centers (a regression pass), following the head-tail-cut classification-regression principle to treat foreground (building/structure) and background (ground) pixels differently during training/inference.
+Technique/Algorithm: Classification-regression (“hybrid regression” / adaptive-bins) height estimation, following the head-tail-cut (HTC) design of HTC-DC Net.
+Why this method: Directly adopted because it is the specific published method shown to correct long-tailed underestimation of building height; plain regression, even after per-region calibration, would still be dominated by the numerically abundant low-height background pixels during any residual learned correction.
+Output: Refined, bias-corrected height map.
+Gap addressed: Gap G3.
+Research basis: HTC-DC Net, Chen et al., arXiv:2309.16486 (head-tail cut, HTC-AdaBins, hybrid regression); the underlying “adaptive bins” classification-regression idea originates in AdaBins (Bhat, Alhashim & Wonka, 2021, CVPR) for natural-image depth, later adapted to remote sensing by HTC-DC Net.
+Failure prevented: Reduces systematic underestimation of tall/vertical structures, the failure mode most consequential for the disaster-management theme of this SIH problem statement.
+Stage 6: DSM & Derived Products
+Input: Refined height map.
+Operation: Outlier removal, edge-preserving smoothing, gap filling, consistency enforcement; export DSM, nDSM/AGL, slope, hillshade, and confidence map with attached CRS/resolution/bounds metadata.
+Technique/Algorithm: Standard DSM post-processing and geospatial export (GDAL).
+Why this method: Unchanged from the original design; no gap identified at this stage beyond ensuring the confidence map from Stage 4/5 is propagated through, not discarded.
+Output: DSM-family geospatial products.
+Gap addressed: Not a new gap-fix on its own, but carries forward the confidence signal introduced to address G2/G3.
+Research basis: Standard geospatial engineering practice.
+Failure prevented: Ensures the evaluation-relevant deliverables (matching the problem statement's 50% DSM-accuracy criterion) are produced in standard, judge-verifiable formats.
+Stage 7: Interactive 3D Flythrough
+Input: DSM / height map plus source RGB orthomosaic.
+Operation: Heightmap → triangulated mesh; tile and level-of-detail (LOD) chunk the mesh for large scenes; UV-project the RGB image as texture; load into Three.js/Unity with fly/walk/orbit/top-down camera modes and measurement tools.
+Technique/Algorithm: Standard heightmap-to-mesh generation, tiled/LOD rendering, and real-time 3D engine integration.
+Why this method: Tiling/LOD is added specifically to address the deployment risk identified as Gap G5 (engineering inference, not literature-backed).
+Output: Interactive, navigable 3D scene, deployable as a standalone application.
+Gap addressed: Gap G5 (partially — mitigates rather than eliminates large-scene performance risk).
+Research basis: General real-time-rendering engineering practice (tiled terrain / LOD), not a specific cited research paper.
+Failure prevented: Reduces the risk of poor frame rate or renderer failure on large or high-resolution DSM tiles, satisfying the “software stability” and “successful standalone deployment” evaluation criteria.
+8. Background Theory for Each Method Introduced
+Only methods actually used in the corrected pipeline are covered here. Methods sometimes seen in adjacent literature but not used in this pipeline (e.g. CBAM attention blocks, PixelShuffle upsampling) are intentionally omitted rather than added for appearance.
+8.1 Vision Transformer (ViT) encoder / DINOv2
+What it is: A neural network that splits an image into patches, embeds each patch as a token, and processes the sequence of tokens with self-attention layers instead of convolution.
+Why it exists: Convolutional networks have a limited, fixed receptive field per layer; self-attention lets every patch directly relate to every other patch in one layer, which helps capture long-range structure (e.g. a building's full extent) in a single forward pass.
+How it works: Patch embedding → positional encoding → stacked self-attention/MLP blocks → patch-level feature vectors. DINOv2 specifically is trained with a self-supervised objective (no labels) on a very large, curated image corpus to produce general-purpose visual features.
+Mathematical intuition: Self-attention computes, for each token, a weighted sum of all other tokens' value vectors, with weights from a softmax over query-key similarity — informally, “which other patches are relevant to understanding this patch.”
+Problem it addresses: Extracting general-purpose visual features usable for downstream dense-prediction tasks like depth estimation.
+Assumptions: Assumes enough patches/resolution to represent relevant structure; pretrained on natural imagery, hence the domain-gap issue this document addresses at length.
+Strengths: Strong general-purpose features; long-range spatial reasoning; transfers well across many downstream vision tasks.
+Weaknesses: Quadratic compute cost in number of patches; features are natural-image-biased unless fine-tuned; needs adaptation for domain-specific geometry such as RPC-based satellite imagery.
+Relevance to our system: This is the encoder used inside Depth Anything V2, which is the encoder we fine-tune in Stage 3.
+Reference: Oquab, M. et al. (2023). “DINOv2: Learning Robust Visual Features without Supervision.” arXiv:2304.07193.
+Adopted or adapted: Adopted directly, unmodified architecture; we fine-tune its weights, we do not redesign it.
+8.2 DPT (Dense Prediction Transformer) decoder
+What it is: A decoder architecture that reassembles ViT patch tokens from multiple encoder depths back into a dense, per-pixel prediction map (e.g. a depth map).
+Why it exists: A ViT encoder alone produces per-patch tokens, not a dense pixel-aligned output; a decoder is needed to upsample and fuse multi-scale token features into a full-resolution prediction.
+How it works: Tokens from several encoder layers are reassembled into feature maps at different spatial resolutions, then progressively fused and upsampled (a convolutional refinement pipeline) to the target output resolution.
+Problem it addresses: Converting transformer token sequences into dense, per-pixel depth predictions.
+Assumptions: Assumes the encoder provides useful multi-scale intermediate features.
+Strengths: Produces sharp, dense depth maps; widely used and validated across depth-estimation literature.
+Weaknesses: Adds decoder-specific parameters and compute; decoder quality depends on encoder feature quality, so a poorly-adapted encoder (domain gap) still limits decoder output.
+Relevance to our system: This is the decoder architecture in Depth Anything V2; used unmodified in Stage 3, with its weights included in the RPC-aware fine-tuning.
+Reference: Ranftl, R., Bochkovskiy, A., Koltun, V. (2021). “Vision Transformers for Dense Prediction.” ICCV 2021.
+Adopted or adapted: Adopted directly.
+8.3 Domain adaptation via geometry-aware fine-tuning
+What it is: The general strategy of taking a model pretrained on one data distribution (natural images) and updating its weights using supervision constructed from the target distribution (satellite imagery), rather than only training a small new module on top of frozen features.
+Why it exists: A frozen pretrained model's internal features are optimized for its original training distribution; when the target distribution differs substantially (as with satellite RPC geometry versus natural pinhole-camera imagery), only updating the model's own weights can correct internally-learned biases, not just their downstream symptoms.
+How it works: Construct pseudo-labels (here: pseudo-depth derived from RPC sensor geometry, when available) for the target domain, then backpropagate a loss between the model's prediction and these pseudo-labels through the encoder and decoder.
+Mathematical intuition: Loss(θ) = L1 or SiLog( f_θ(image) , pseudo_depth_from_RPC ), minimized over backbone parameters θ via gradient descent.
+Problem it addresses: Bridging the domain gap identified in Gap G1, without requiring large amounts of ground-truth LiDAR-measured depth for every scene.
+Assumptions: Assumes RPC/sensor geometry metadata is available and reasonably accurate; assumes pseudo-depth, while imperfect, is a useful training signal.
+Strengths: Reuses a strong pretrained backbone rather than training from scratch; requires comparatively little labeled data since the pseudo-depth supervision is derived from geometry, not manual annotation.
+Weaknesses: Pseudo-depth is only as good as the underlying RPC model and any coarse reference DEM used to construct it; fine-tuning risks some catastrophic forgetting of general natural-image capability, which parameter-efficient fine-tuning (e.g. LoRA-style adapters) can mitigate but this document does not claim we have implemented that specific mitigation.
+Relevance to our system: This is the mechanism used throughout Stage 3.
+Reference: Sat3R, Yang et al., arXiv:2605.07264.
+Adopted or adapted: Adopted directly as a strategy; our contribution is applying it within this specific SIH pipeline, not inventing the strategy.
+8.4 RANSAC (Random Sample Consensus) robust regression
+What it is: An iterative method for fitting a model (e.g. a line/affine transform) to data that contains outliers, by repeatedly fitting to small random subsets and keeping the fit with the most inlier agreement.
+Why it exists: Ordinary least-squares regression is highly sensitive to outliers; remote-sensing height data commonly contains outliers from misregistration, occlusion, or sensor noise.
+How it works: Randomly sample a minimal subset of points, fit a candidate model, count how many of the remaining points agree with it within a tolerance (inliers), repeat many times, and keep the candidate with the largest inlier set; refit using all inliers.
+Mathematical intuition: For a candidate model M and tolerance ε, a point p is an inlier if |M(p.x) - p.y| < ε; the chosen model maximizes the inlier count over many random trials.
+Problem it addresses: Robustly estimating the scale-and-shift relationship between relative depth and reference elevation despite noisy or outlier-contaminated correspondences.
+Assumptions: Assumes a majority of the sampled points are genuine inliers to the true underlying relationship for the chosen model class.
+Strengths: Well-established, simple, robust to a substantial outlier fraction; widely used in photogrammetry and computer vision.
+Weaknesses: The model class must be chosen correctly — fitting a single global affine model with RANSAC is still a single global affine model; RANSAC's robustness to outliers does not fix the model-class mismatch identified in Gap G2, which is why we changed the model class (per-region fitting) rather than only relying on RANSAC's outlier-robustness.
+Relevance to our system: Used in Stage 4, now applied per semantic region rather than scene-wide.
+Reference: Fischler, M. A., Bolles, R. C. (1981). “Random Sample Consensus: A Paradigm for Model Fitting with Applications to Image Analysis and Automated Cartography.” Communications of the ACM, 24(6).
+Adopted or adapted: Adopted directly, unmodified algorithm; our change is in how many regions it is applied to (per-class vs. global), not the algorithm itself.
+8.5 Classification-regression (adaptive bins / head-tail cut) for long-tailed regression
+What it is: A hybrid prediction strategy that first discretizes a continuous target (height) into adaptive classes (bins), predicts a probability distribution over those classes, then reconstructs a continuous value as a probability-weighted average of bin centers.
+Why it exists: Plain regression losses (e.g. mean squared error) are dominated by the majority class in a long-tailed distribution; framing part of the problem as classification lets the loss treat rare classes (tall buildings) with more explicit structure, and the head-tail cut specifically separates foreground/background treatment.
+How it works: A learned module predicts per-image bin edges (adaptive to that image's own height distribution) and per-pixel bin probabilities; the head-tail cut further separates the treatment of low-height background (“head” of the distribution) from higher, rarer foreground heights (“tail”); a final hybrid regression step smooths the discretized prediction back into a continuous value.
+Mathematical intuition: height(pixel) = Σᵢ P(pixel, bin_i) · center(bin_i), where P is the predicted bin-probability distribution and bin edges are adaptive per image.
+Problem it addresses: Gap G3: systematic underestimation of building height caused by long-tailed height distributions.
+Assumptions: Assumes the number of bins and the head-tail split point are reasonable hyperparameters for the target scene types; assumes enough foreground (building) pixels exist in training data to learn a meaningful tail representation.
+Strengths: Demonstrated in the cited paper to outperform plain U-Net-style regression baselines by a large margin specifically on building pixels.
+Weaknesses: Adds hyperparameters (bin count, split criterion) and a more complex training/inference pipeline than plain regression; the original paper itself notes that domain shift between different cities remains challenging even with this design.
+Relevance to our system: This is the mechanism used in Stage 5.
+Reference: Chen, S. et al., HTC-DC Net, arXiv:2309.16486; the underlying adaptive-bins idea originates in Bhat, S. F., Alhashim, I., Wonka, P. (2021). “AdaBins: Depth Estimation using Adaptive Bins.” CVPR 2021.
+Adopted or adapted: Adopted directly; not invented by this project.
+8.6 Semantic region segmentation for calibration
+What it is: Assigning each pixel in a scene to a coarse land-cover/structure class (e.g. ground, building, vegetation) so that downstream processing can be applied per class rather than uniformly.
+Why it exists: Different physical surface types respond differently to viewing geometry (a flat road versus a building facade are not affected by off-nadir viewing in the same way), so any per-scene calibration benefits from knowing which pixels belong to which physical category.
+How it works: A semantic segmentation model (any standard architecture; not specified as a novel contribution here) classifies each pixel into a small set of coarse classes, which are then used to partition pixels before the per-region RANSAC fit in Stage 4.
+Problem it addresses: Supplying the region partitioning needed to fix Gap G2.
+Assumptions: Assumes the segmentation model is reasonably accurate; segmentation errors at class boundaries will locally propagate into calibration errors.
+Strengths: Well-established technique with many mature, publicly available pretrained models for land-cover/building segmentation.
+Weaknesses: Adds an additional model/inference step and a dependency on segmentation accuracy; is not itself a height-estimation technique, only a supporting one.
+Relevance to our system: Used as an input to Stage 4's per-region calibration.
+Reference: Generic technique; no single canonical citation claimed here since this document does not commit to one specific segmentation architecture.
+Adopted or adapted: Adopted as a standard, off-the-shelf technique; the specific segmentation model to be used is an implementation decision left open in this document.
+8.7 Heightmap-to-mesh generation with tiling / level of detail (LOD)
+What it is: Converting a 2D grid of height values into a 3D triangulated surface, and splitting that surface into spatial chunks rendered at different levels of geometric detail depending on camera distance.
+Why it exists: A full-resolution single mesh for a large DSM tile can contain more triangles than a browser-based WebGL renderer (e.g. Three.js) can maintain at interactive frame rates.
+How it works: Grid points become mesh vertices, connected into triangles; the mesh is divided into spatial tiles, each with multiple precomputed detail levels, and the renderer swaps in coarser geometry for distant tiles.
+Problem it addresses: The deployment risk flagged as Gap G5.
+Assumptions: Assumes a reasonable tiling granularity can be chosen for the target hardware; introduces a trade-off between visual fidelity at a distance and rendering performance.
+Strengths: Standard, well-understood technique in real-time terrain rendering (used broadly in mapping/gaming engines).
+Weaknesses: Adds implementation complexity relative to a single static mesh; visible “popping” between LOD levels if not handled carefully (e.g. with geomorphing or blending).
+Relevance to our system: Used in Stage 7 to satisfy the “software stability” / “successful standalone deployment” evaluation criteria.
+Reference: General computer-graphics practice; no single specific paper is cited as this is treated as standard engineering practice, not a research claim.
+Adopted or adapted: Adopted as standard engineering practice.
+9. Mathematical Formulation
+Only the computations that materially explain how the corrected pipeline works are included; symbols are defined at first use.
+9.1 Depth backbone fine-tuning (Stage 3)
+Let I be an input RGB tile, f_θ the encoder-decoder depth network with parameters θ (initialized from pretrained Depth Anything V2), and d̂ = f_θ(I) the predicted relative depth map.
+Given RPC sensor parameters for the tile, a pseudo-depth map d_rpc is constructed from known scene/sensor geometry (following Sat3R's construction of “physically consistent pseudo depth supervision from RPC geometry”). The fine-tuning objective minimizes:
+L(θ) = SiLog( d̂ , d_rpc )   or   L(θ) = || d̂ − d_rpc ||₁
+where SiLog is the Scale-Invariant Logarithmic loss used by Sat3R specifically because it is tolerant of the residual scale ambiguity that remains in relative depth. θ is updated by gradient descent: θ ← θ − η ∇θ L(θ), where η is the learning rate.
+9.2 Per-region scale calibration (Stage 4)
+Let the scene be partitioned by a segmentation function s(x) ∈ {ground, building, vegetation} for pixel x. For each class c, fit
+z_c(x) = a_c · d̂(x) + b_c
+where a_c and b_c are the scale and shift for class c, estimated by RANSAC against the reference DEM elevation z_ref(x) restricted to pixels with s(x) = c. The full-scene absolute height prediction is:
+ẑ(x) = a_{s(x)} · d̂(x) + b_{s(x)}
+This is the same functional form as the original single global fit, but with class-conditional parameters instead of one shared (a, b) pair — the minimal change needed to address Gap G2 while keeping the same robust-fitting machinery.
+9.3 Classification-regression height refinement (Stage 5)
+Following the adaptive-bins / head-tail-cut formulation: for each pixel x, the network predicts bin edges b₀ < b₁ < ... < b_N (adaptive to the image) and a probability distribution P(x, i) over N bins. The final height estimate is the expectation over bins:
+h(x) = Σᵢ₌₁ᴺ P(x, i) · c_i,   where c_i = (b_{i−1} + b_i) / 2
+The head-tail cut modifies how the bin edges/probabilities are supervised so that low-height background pixels (“head” of the distribution) and rarer tall/building pixels (“tail”) are not optimized with the same implicit weighting, which is what corrects the underestimation bias described in Gap G3.
+10. Complete Data Flow
+INPUT (RGB or GeoTIFF)
+↓ Stage 1 — metadata parsed; representation changes from “raw file” to “classified image + optional CRS/geotransform”. CRS/geotransform is retained for the whole pipeline if present; nothing is discarded here.
+↓ Stage 2 — representation changes from “raw pixel values” to “cleaned, tiled, normalized tensor” suitable for the ViT encoder. Cloud-masked regions are flagged (retained as a mask, not discarded) so downstream stages know where the depth estimate is unreliable.
+↓ Stage 3 (model) — the DINOv2 encoder receives the normalized tile and outputs patch-level feature tokens (discarding raw pixel detail in favor of learned features); the DPT decoder receives multi-scale tokens and outputs a dense relative depth map d̂, the same spatial resolution as the input tile. This is the first “prediction” artifact in the pipeline.
+↓ Branch — if non-georeferenced: d̂ is retained as the final relative height product and passed directly to Stage 6/7. If georeferenced: d̂ is passed to Stage 4 together with the retained CRS/geotransform from Stage 1.
+↓ Stage 4 (fusion point) — d̂ is combined (“fused”) with an externally fetched reference DEM z_ref and a semantic segmentation map s(x); RANSAC per class produces (a_c, b_c) pairs; these are applied to produce absolute height ẑ. The segmentation map itself is not needed further downstream and can be discarded after this stage, except for optional QA overlays.
+↓ Stage 5 (refinement) — ẑ is refined into h(x) via the classification-regression head-tail-cut process; this is the final height/elevation representation used for all downstream output.
+↓ Stage 6 — h(x) is post-processed (outlier removal, smoothing, gap filling) and exported into the DSM-family product set; the cloud-mask flag from Stage 2 and the DEM-cross-check confidence from Stage 4 are combined into the final confidence map, not discarded.
+↓ Stage 7 — the DSM (or relative height map) is converted to a tiled/LOD mesh; the original RGB image (retained since Stage 1/2) is projected onto the mesh as texture.
+FINAL OUTPUT — DSM-family geospatial files + interactive 3D flythrough.
+11. Architecture Diagram Explanation
+Two diagrams were previously generated in this project's design process and are treated as the current reference figures: (a) the corrected six-stage master pipeline (input/auto-detect → preprocessing → fine-tuned depth backbone → georeferenced/non-georeferenced branch with geometry-aware calibration → bias-aware refinement → DSM & derived products → 3D flythrough), and (b) two zoomed sub-diagrams for the fine-tuning loop (Stage 3) and the per-region calibration loop (Stage 4). A single-page poster integrating both levels was also produced as the presentation artifact.
+11.1 Component-by-component mapping
+11.2 Label corrections recommended
+The original diagram's Stage 3 box was labeled simply “Depth Anything V2 (Pre-trained Backbone)” with a frozen/snowflake icon. This should be corrected to “Fine-tuned Depth Anything V2 backbone (RPC-aware, domain-adapted)” to avoid implying the backbone remains frozen, since that framing is exactly what Gap G1 identifies as insufficient. Similarly, the original “Scale & Shift Estimation (z = a·d + b)” box should be relabeled “Per-region scale & shift estimation (z_c = a_c·d + b_c)” to reflect the Gap G2 correction; presenting the old single-equation label unchanged in a judge-facing deck would misrepresent the corrected method.
+12. Gap → Solution Mapping
+13. Old vs New Comparison
+No quantitative accuracy numbers (RMSE/MAE/correlation) are claimed for our own system anywhere in this document, because no experiments have been run on our own implementation yet. Every quantitative figure referenced in this document belongs to a cited third-party paper's own reported results on their own benchmark, not to our system.
+14. Prior Art / Existing Solutions Check
+An honest overlap assessment is required by the task brief; overlap is not hidden here.
+15. Existing Name / Architecture Validation
+No project-specific architecture name (e.g. an acronym like “RDAH-Net”) has been coined anywhere in this project's design discussions to date. The only project-level name in use is “DepthWizard,” which is the name of the SIH problem statement itself (assigned by ISRO/Department of Space), not a name we invented for a novel architecture, so it does not require novelty validation in the same sense.
+As a precaution, the components that could be mistaken for an original named architecture were checked:
+“Correction U-Net” (original workflow) — a generic descriptive term (a U-Net used for correction), not a specific named architecture; no prior-art conflict, but also not a claim of novelty on our part.
+“HTC-DC Net” — this name already exists and is EXISTING PRIOR ART (Chen et al., IEEE TGRS / arXiv:2309.16486). It must never be presented as our own architecture; it is cited and used as-is.
+“Sat3R” — this name already exists and is EXISTING PRIOR ART (Yang et al., arXiv:2605.07264). Same treatment as above.
+Recommended naming strategy going forward: if the team wants a single name for the overall integrated pipeline for the PPT/report, it should be a descriptive project name (e.g. “DepthWizard pipeline”, matching the problem statement's own title) rather than a new technical acronym implying a new architecture, since the underlying architectural components are demonstrably adopted from named, published, and independently citable sources (Sat3R, HTC-DC Net, Depth Anything V2, DINOv2, AdaBins). Coining a new acronym for the overall integration is acceptable as a project name but should be presented and defended explicitly as an integration/pipeline name, not an architecture name, to avoid an implicit novelty claim the evidence does not support.
+16. Actual Contribution / Novelty Analysis
+16.1 Existing technology (adopted essentially unmodified)
+Depth Anything V2 backbone architecture (DINOv2 encoder + DPT decoder).
+RPC-aware fine-tuning strategy and pseudo-depth supervision construction, and the SiLog loss choice (Sat3R).
+RANSAC robust regression algorithm.
+Classification-regression / adaptive-bins / head-tail-cut height refinement (HTC-DC Net, building on AdaBins).
+Standard geospatial preprocessing/export tooling (GDAL/rasterio ecosystem).
+Standard heightmap-to-mesh and Three.js/Unity rendering techniques.
+16.2 Adaptation (existing techniques changed/customized for this problem)
+Applying RANSAC per semantic region rather than scene-wide, to address the specific geometric non-uniformity of off-nadir satellite imagery (Gap G2) — a modification of an existing algorithm's scope of application, not a new algorithm.
+Applying HTC-DC Net's refinement approach downstream of a different upstream backbone (Sat3R-style fine-tuned Depth Anything V2) than HTC-DC Net's own published encoder.
+16.3 Integration (combining existing pieces into one pipeline)
+Combining a fine-tuned foundation depth model, per-region geometric calibration, classification-regression bias correction, and a tiled 3D visualization layer into a single, auto-routing (georeferenced/non-georeferenced) end-to-end pipeline is, to our knowledge, not published as a single system in the sources reviewed for this document; this integration is the primary locus of our project's contribution.
+16.4 Engineering contribution (making it practical for this SIH deliverable)
+Automatic georeferencing detection and routing logic (CRS/geotransform/world-file/EXIF checks).
+DEM cross-check confidence flagging as an explicit, exposed output product.
+Tiled/LOD deployment strategy for the visualization layer, aimed specifically at the “standalone deployment” and “software stability” evaluation criteria.
+16.5 Potential research contribution (only if defensible, and only with future validation)
+If, after implementation, the per-region calibration (Stage 4) is empirically shown to reduce cross-class height error compared to a global affine fit on a held-out benchmark (e.g. DFC2019 or ISPRS Vaihingen), that specific empirical comparison — not the RANSAC algorithm itself — could be a legitimate, narrow research contribution worth reporting. This is explicitly labeled as a hypothesis pending experimental validation, not a claim made anywhere else in this document.
+No other component of this project should be presented to judges as “novel,” “new,” “first,” or “our proposed architecture,” per the task's explicit constraint.
+17. Evaluation Strategy
+Matching the SIH evaluation criteria directly:
+17.1 DSM accuracy (50%)
+Benchmark on DFC2019 (US3D), ISPRS Vaihingen, and ISPRS Potsdam, since these have LiDAR-derived ground truth and are the same benchmarks used by the cited comparison methods (Sat3R, HTC-DC Net), enabling like-for-like comparison.
+Report RMSE, MAE, and correlation, broken out by terrain type (urban/sparse/hilly/forested) as the problem statement specifies, and separately by region class (ground vs. building) to make the Gap G2/G3 corrections' effect visible rather than hidden in an aggregate number.
+Ablation: compare (a) frozen backbone + correction net, (b) fine-tuned backbone only, (c) fine-tuned backbone + per-region calibration, (d) full pipeline with bias-aware refinement, to isolate the effect of each corrected stage — this is the direct way to substantiate or falsify the “mitigates/addresses” language used throughout this document with our own measured evidence, which does not yet exist.
+17.2 Visualization quality (50%)
+Projection accuracy: visually verify texture alignment against known building footprints.
+Frame-rate benchmarking of the tiled/LOD mesh under varying scene sizes, directly targeting the Gap G5 risk.
+Manual usability review of navigation controls (fly/walk/orbit/top-down) and measurement tools.
+18. Limitations
+No experimental results exist yet for our own implementation; every improvement claimed in this document is either (a) reported by a cited third party on their own benchmark, or (b) an engineering inference explicitly labeled as such.
+Per-region calibration (Gap G2 fix) depends on segmentation accuracy; no specific segmentation model has been finalized or benchmarked in this document.
+Fine-tuning (Gap G1 fix) requires RPC/sensor geometry metadata; when unavailable, the pipeline cannot fully replicate Sat3R's approach and effectively falls back closer to the original zero-shot backbone behavior.
+HTC-DC Net's own paper reports continued difficulty with domain shift between different cities/urban morphologies even with the head-tail-cut design — our use of the same technique inherits this limitation.
+The LEVIR-NVS dataset mismatch claim (Gap G4) is based on secondary characterization, not a primary-source citation pulled directly in this document, and should be independently re-confirmed.
+The tiled/LOD mesh mitigation (Gap G5) is an engineering inference, not benchmarked or literature-validated for this specific pipeline.
+18.1 Evidence / Claim Audit
+19. Research-Backed Bibliography
+A. Problem / background
+Bosch, M., Foster, K., Christie, G., Wang, S., Hager, G. D., Brown, M. (2019). “Semantic Stereo for Incidental Satellite Images.” IEEE WACV 2019, pp. 1524–1532. DOI: 10.1109/WACV.2019.00167. — Introduces the US3D dataset underlying DFC2019; establishes the scale and structure of the standard satellite-DSM benchmark used throughout this document.
+Le Saux, B., Yokoya, N., Hänsch, R., Brown, M. (2019). “Data Fusion Contest 2019 (DFC2019).” IEEE Dataport. DOI: 10.21227/c6tm-vw12. — The dataset release used as one of our core training/evaluation benchmarks.
+B. Gap / failure evidence
+Yang, Q., Zhou, C., Liu, X., Wang, R., Xu, M., Pesé, M. D., Luo, F., Xu, Y., Cheng, Z., Chen, Q., Qi, H., Huang, S. (2026). “Sat3R: Satellite DSM Reconstruction via RPC-Aware Depth Fine-tuning.” arXiv:2605.07264. — Direct evidence for Gap G1 and the source of our Stage 3 fine-tuning method.
+Chen, S. et al. (2023/2024). “HTC-DC Net: Monocular Height Estimation From Single Remote Sensing Images.” IEEE Transactions on Geoscience and Remote Sensing; arXiv:2309.16486. — Direct evidence for Gap G3 and the source of our Stage 5 refinement method.
+Grodecki, J., Dial, G. (2003). “Block Adjustment of High-Resolution Satellite Images Described by Rational Polynomials.” Photogrammetric Engineering & Remote Sensing, 69(1), 59–68. (Identified via citation in GeoRay, arXiv:2608.29680.) — Indirect evidence for Gap G2's geometric non-linearity argument.
+Van Etten, A., Lindenbaum, D., Bacastow, T. M. (2018). “SpaceNet: A Remote Sensing Dataset and Challenge Series.” arXiv:1807.01232. — Primary-source evidence for Gap G4 (SpaceNet lacks elevation labels).
+Cornebise, J., Oršolić, I., Kalaitzis, F. (2022). “Open High-Resolution Satellite Imagery: The WorldStrat Dataset — With Application to Super-Resolution.” NeurIPS 2022 Datasets and Benchmarks Track; arXiv:2207.06418. — Primary-source evidence for Gap G4 (WorldStrat lacks elevation labels).
+C. Core model / architecture
+Yang, L., Kang, B., Huang, Z., Zhao, Z., Xu, X., Feng, J., Zhao, H. (2024). “Depth Anything V2.” arXiv:2406.09414. — The monocular depth foundation model used as our Stage 3 backbone.
+Oquab, M. et al. (2023). “DINOv2: Learning Robust Visual Features without Supervision.” arXiv:2304.07193. — The ViT encoder architecture inside Depth Anything V2.
+Ranftl, R., Bochkovskiy, A., Koltun, V. (2021). “Vision Transformers for Dense Prediction.” ICCV 2021. — The DPT decoder architecture inside Depth Anything V2.
+D. Individual techniques
+Fischler, M. A., Bolles, R. C. (1981). “Random Sample Consensus: A Paradigm for Model Fitting with Applications to Image Analysis and Automated Cartography.” Communications of the ACM, 24(6), 381–395. — The robust-regression algorithm used, per-region, in our Stage 4.
+Bhat, S. F., Alhashim, I., Wonka, P. (2021). “AdaBins: Depth Estimation using Adaptive Bins.” CVPR 2021. — Origin of the adaptive-bins classification-regression idea later adapted by HTC-DC Net.
+E. Supporting methods
+Liu, C.-J., Krylov, V. A., Kane, P., Kavanagh, G., Dahyot, R. (2020). “IM2ELEVATION: Building Height Estimation from Single-View Aerial Imagery.” Remote Sensing, 12(17), 2719. DOI: 10.3390/rs12172719. — A closely related end-to-end single-image-to-DSM network, discussed in Part 14 as prior art with a different architectural strategy (single trained network vs. our foundation-model-plus-calibration pipeline).
+F. Prior-art / competing approaches
+Same as Sat3R, HTC-DC Net, IM2ELEVATION, and AdaBins entries above, per the detailed comparison in Part 14.
+G. Evaluation methodologies
+ISPRS 2D Semantic Labeling Contest benchmarks (Vaihingen and Potsdam), maintained by ISPRS Working Group III/4, used by HTC-DC Net and referenced throughout this document as standard evaluation datasets with LiDAR-derived ground truth.
+20. Judge Questions & Answers
+Q: Why did you change the original workflow?
+A: Three specific technical gaps were found by cross-checking the original design against the published monocular-height-estimation literature: a frozen backbone cannot close the natural-to-satellite domain gap (Sat3R's own stated motivation), a single global affine calibration cannot represent geometry-dependent height calibration under off-nadir viewing, and unmitigated regression is known to bias against tall buildings specifically (HTC-DC Net). We changed only what the evidence pointed to, not the overall pipeline structure.
+Q: What exactly was the original gap?
+A: See Part 4 for the full gap table. In short: (1) frozen backbone + post-hoc correction net, (2) one global scale-and-shift equation applied scene-wide, (3) no explicit handling of the long-tailed height distribution, (4) three of six listed datasets do not contain elevation labels.
+Q: What paper proves the gap?
+A: Sat3R (arXiv:2605.07264) for the domain-gap claim; HTC-DC Net (arXiv:2309.16486) for the long-tail bias claim; the datasets' own primary papers (SpaceNet arXiv:1807.01232, WorldStrat arXiv:2207.06418) for the dataset-mismatch claim. The geometric non-linearity claim (Gap G2) is supported indirectly via RPC-geometry literature rather than a single paper that directly tests our exact comparison — we state this distinction openly rather than overstating the evidence.
+Q: Why does your new method address it?
+A: Each new method is the specific published fix for the matching gap, not a generic improvement: RPC-aware fine-tuning updates the backbone's own weights instead of only correcting its output; per-region calibration matches the model's degrees of freedom to the geometry that actually varies by region; classification-regression explicitly separates how foreground and background pixels are optimized.
+Q: Why did you choose this model instead of alternatives?
+A: Depth Anything V2 was chosen as the backbone because it is a freely available, strong, general-purpose monocular depth foundation model, and because a specific, citable adaptation strategy (Sat3R) already exists for exactly this backbone in the satellite domain — reducing the risk of an unproven adaptation approach. Alternative end-to-end architectures such as IM2ELEVATION exist and solve a similar problem, but require training a full network on registered LiDAR-optical pairs for a specific city, which is less generalizable across the sensor/region diversity implied by the SIH problem statement.
+Q: Is this architecture already published?
+A: Yes, each individual component is already published: Depth Anything V2, its RPC-aware fine-tuning (Sat3R), and the classification-regression refinement (HTC-DC Net) are all existing, citable work. We do not claim to have invented any of them. What is not, to our knowledge, already published as a single system is the specific combination of these components into one auto-routing pipeline with an integrated 3D visualization/deployment layer for this SIH problem statement.
+Q: What exactly is your novelty?
+A: Per Part 16: integration of existing components into a single working pipeline, the auto-routing/detection engineering, the DEM cross-check confidence output, and the tiled/LOD visualization deployment strategy. We do not claim novelty in any underlying model, loss function, or training algorithm.
+Q: Which components are borrowed from existing research?
+A: The depth backbone (Depth Anything V2/DINOv2/DPT), the fine-tuning strategy (Sat3R), the robust-regression algorithm (RANSAC), and the bias-correction method (HTC-DC Net/AdaBins) are all borrowed, cited, and used largely as published.
+Q: What happens when the system fails?
+A: Known failure modes, honestly stated: fine-tuning quality degrades without RPC/sensor geometry metadata; per-region calibration degrades if semantic segmentation misclassifies a region; classification-regression inherits HTC-DC Net's own reported difficulty with cross-city domain shift; large scenes risk frame-rate problems if tiling/LOD is not properly tuned. The confidence map and DEM cross-check are specifically included so these failures are visible to the user rather than silent.
+Q: What are the limitations?
+A: See Part 18 in full. Most importantly: no experimental results exist yet for our own implementation; several “addresses/mitigates” claims are supported by evidence for the general technique from its original paper, not by our own measured results on this specific pipeline.
+Q: What evidence do you have?
+A: Direct published evidence for Gaps G1, G3, and G4 (specific papers stating the exact failure mode and, for G1/G3, a specific published fix). Indirect/inferential evidence for Gap G2 (general RPC-geometry non-linearity, not a paper testing our exact per-region-vs-global comparison). Engineering inference (no citation) for Gap G5.
+Q: What would you test next?
+A: The ablation study outlined in Part 17.1: frozen-backbone-baseline vs. fine-tuned-backbone vs. fine-tuned-backbone-plus-per-region-calibration vs. full pipeline, each measured with RMSE/MAE/correlation broken out by terrain type and by region class (ground vs. building), on DFC2019/ISPRS Vaihingen/Potsdam, to convert the current “expected” claims in Part 13 into measured ones.
+21. Canonical Final Workflow
+This is the definitive version of the project for SIH documentation, PPT, technical report, architecture diagram, presentation, and viva.
+This canonical workflow, and the gap-to-solution reasoning chain documented in Parts 4–12, should be used together as the single source of truth for all SIH deliverables going forward; any future change to a stage should be recorded in this document following the same evidence-labeling discipline (Parts 13 and 18.1) rather than silently replacing prior content.
