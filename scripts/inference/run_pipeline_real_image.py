@@ -26,7 +26,11 @@ from depthwizard.calibration.region_calibration import fit_region_calibration, a
 from depthwizard.products.export import generate_all_products
 
 def main():
-    scene_stem = "area1"
+    if len(sys.argv) > 1:
+        scene_stem = sys.argv[1]
+    else:
+        scene_stem = "area1"
+        
     imagery_path = f"dataset/imagery/{scene_stem}_imagery.tif"
     dsm_path = f"dataset/dsm/{scene_stem}_dsm.tif"
     semantic_path = f"data/raw/Vaihingen/Vaihingen/ground_truth_COMPLETE/top_mosaic_09cm_{scene_stem}.tif"

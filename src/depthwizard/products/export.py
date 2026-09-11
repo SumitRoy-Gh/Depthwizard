@@ -83,21 +83,20 @@ def compute_ndsm(
     dsm: np.ndarray,
     kernel_size: int = 51,
     valid_mask: np.ndarray | None = None,
+    gsd_m: float = 0.09,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute the Normalized DSM (nDSM / AGL) by estimating a bare-earth DTM
-    via morphological opening (minimum filter followed by maximum filter).
+    via a Progressive Morphological Filter (PMF).
 
     The nDSM isolates the height of structures above the local ground level:
-        nDSM = DSM - DTM
+        nDSM = max(0, DSM - DTM)
 
     Args:
         dsm: (H, W) absolute elevation array.
-        kernel_size: Size of the morphological structuring element.
-                     Should be large enough to span buildings but small
-                     enough to preserve terrain variation. 51 pixels at
-                     ~9cm GSD ≈ 4.6m footprint — appropriate for Vaihingen.
+        kernel_size: Max window size of the morphological structuring element.
         valid_mask: Optional boolean mask of valid pixels.
+        gsd_m: Ground sample distance in meters.
 
     Returns:
         (ndsm, dtm) — both (H, W) float32 arrays.
@@ -106,21 +105,77 @@ def compute_ndsm(
 
     dsm_work = dsm.astype(np.float32).copy()
 
-    # Fill invalid pixels with local max to prevent them from corrupting
-    # the morphological filters
     if valid_mask is not None:
         dsm_work[~valid_mask] = np.nanmax(dsm_work[valid_mask]) if valid_mask.any() else 0.0
 
-    # Morphological opening: erode then dilate
-    # This removes objects narrower than the kernel (buildings, trees)
-    # while preserving the broad terrain surface.
-    dtm = minimum_filter(dsm_work, size=kernel_size)
-    dtm = maximum_filter(dtm, size=kernel_size)
+    # Progressive Morphological Filter (PMF)
+    # Parameters for urban PMF
+    slope_threshold = 0.15
+    initial_dh = 0.2
+    max_dh = 4.0
+    
+    dtm = dsm_work.copy()
+
+    # 2. Iterative Morphological Filtering (Progressive Window Sizes)
+    last_surface = dtm.copy()
+    
+    # We want a maximum window size that covers ~45 meters.
+    # At 9cm GSD, 45 meters / 0.09 = 500 pixels.
+    max_window_size = 501    
+    dtm = dsm_work.copy()
+    
+    # Sequence of window sizes.
+    # Legacy kernel_size of 51 (~4.6m) is too small to remove real buildings.
+    actual_max_kernel = max(kernel_size, max_window_size)
+    
+    window_sizes = [3, 5, 7]
+    k = 11
+    while k <= actual_max_kernel:
+        window_sizes.append(k)
+        if k < 51:
+            k += 10
+        elif k < 101:
+            k += 20
+        elif k < 501:
+            k += 50
+        else:
+            k += 250
+            
+    if window_sizes[-1] != actual_max_kernel:
+        window_sizes.append(actual_max_kernel)
+
+    last_surface = dsm_work.copy()
+    
+    for i, w in enumerate(window_sizes):
+        # Opening with mode='nearest' to preserve boundary invariants
+        opened = minimum_filter(last_surface, size=w, mode='nearest')
+        opened = maximum_filter(opened, size=w, mode='nearest')
+        
+        if i == 0:
+            dh_T = initial_dh
+        else:
+            w_prev = window_sizes[i-1]
+            dh_T = slope_threshold * (w - w_prev) * gsd_m + initial_dh
+            
+        dh_T = min(dh_T, max_dh)
+        
+        diff = last_surface - opened
+        non_ground_mask = diff > dh_T
+        
+        dtm = np.where(non_ground_mask, opened, dtm)
+        last_surface = opened
 
     ndsm = dsm_work - dtm
 
-    # Clamp negative values (small artifacts from the morphological filter)
+    # Clamp negative values (small artifacts). Since mode='nearest' is used,
+    # DTM <= DSM holds mathematically everywhere except possibly tiny numeric noise
+    # or edges. The clamping here is negligible-noise correction.
     ndsm = np.clip(ndsm, 0.0, None)
+
+    # Restore invalid regions to original values to avoid invariant violations
+    if valid_mask is not None:
+        dtm[~valid_mask] = dsm[~valid_mask]
+        ndsm[~valid_mask] = 0.0
 
     return ndsm.astype(np.float32), dtm.astype(np.float32)
 
@@ -211,19 +266,27 @@ def compute_hillshade(
 def compute_confidence_map(
     valid_mask: np.ndarray,
     ransac_inlier_mask: np.ndarray | None = None,
+    dsm: np.ndarray | None = None,
+    dtm: np.ndarray | None = None,
+    inversion_tolerance: float = 0.05,
 ) -> np.ndarray:
     """
     Combine validity and RANSAC inlier information into a single confidence
     map with values:
-        0 = invalid (cloud/nodata)
+        0 = invalid (cloud/nodata) or physical invariant violation
         1 = valid but RANSAC outlier (low confidence)
         2 = valid and RANSAC inlier (high confidence)
 
-    If no RANSAC mask is provided, all valid pixels get confidence 2.
+    Explicit contract: Any pixel where DSM < DTM - tolerance MUST be flagged
+    as low confidence (0 or 1), because this violates the physical bare-earth
+    invariant (DTM <= DSM).
 
     Args:
         valid_mask: (H, W) boolean mask of valid pixels.
         ransac_inlier_mask: (H, W) boolean mask of RANSAC inliers (optional).
+        dsm: (H, W) absolute elevation array.
+        dtm: (H, W) bare-earth model array.
+        inversion_tolerance: Numeric tolerance for DTM > DSM (in meters).
 
     Returns:
         (H, W) uint8 confidence map.
@@ -235,6 +298,11 @@ def compute_confidence_map(
         # Valid but outlier -> low confidence
         outlier = valid_mask & ~ransac_inlier_mask
         confidence[outlier] = 1
+
+    # Contract: DTM must be <= DSM. Flag inversions as low confidence.
+    if dsm is not None and dtm is not None:
+        inversion = dsm < (dtm - inversion_tolerance)
+        confidence[inversion] = 0
 
     return confidence
 
@@ -281,7 +349,7 @@ def generate_all_products(
     print(f"  [OK] DSM -> {dsm_path}")
 
     # 2. nDSM (Above-Ground-Level)
-    ndsm, dtm = compute_ndsm(dsm, kernel_size=ndsm_kernel, valid_mask=valid_mask)
+    ndsm, dtm = compute_ndsm(dsm, kernel_size=ndsm_kernel, valid_mask=valid_mask, gsd_m=gsd_m)
     ndsm_path = os.path.join(output_dir, f"{scene_name}_nDSM.tif")
     write_geotiff(ndsm, ndsm_path, crs=crs, transform=transform)
     products["ndsm"] = ndsm_path
@@ -309,7 +377,12 @@ def generate_all_products(
 
     # 5. Confidence Map
     if valid_mask is not None:
-        conf = compute_confidence_map(valid_mask, ransac_inlier_mask)
+        conf = compute_confidence_map(
+            valid_mask, 
+            ransac_inlier_mask, 
+            dsm=dsm, 
+            dtm=dtm
+        )
         conf_path = os.path.join(output_dir, f"{scene_name}_confidence.tif")
         write_geotiff(conf, conf_path, crs=crs, transform=transform, dtype="uint8")
         products["confidence"] = conf_path
