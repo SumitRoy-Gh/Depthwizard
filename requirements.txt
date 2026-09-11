@@ -14,10 +14,10 @@ transformers>=4.46.0
 
 # Visualization & Utilities
 matplotlib>=3.8.0
+trimesh>=5.1.0
 
 # Testing & Quality Assurance
 pytest>=8.0.0
 
 # Editable local installation
 -e .
-
