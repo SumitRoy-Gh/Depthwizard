@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DepthWizard 3D Flythrough</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="ui-layer">
+        <div class="panel header">
+            <h1>DepthWizard 3D Flythrough</h1>
+            <p>Standalone Stage 7 Terrain Viewer</p>
+        </div>
+        
+        <div class="panel controls">
+            <h3>Camera Modes</h3>
+            <button id="btn-orbit" class="active">Orbit (Drone)</button>
+            <button id="btn-fly">Fly (Helicopter)</button>
+            <button id="btn-walk">Walk (Pedestrian)</button>
+        </div>
+        
+        <div class="panel info" id="point-info">
+            <h3>Coordinate Inspector</h3>
+            <p>Click anywhere on the terrain to inspect.</p>
+            <div id="inspector-data">
+                <span><strong>Lat/Lon:</strong> <span id="val-latlon">--</span></span><br>
+                <span><strong>Elevation (m):</strong> <span id="val-elev">--</span></span>
+            </div>
+        </div>
+        
+        <div class="crosshair" id="crosshair"></div>
+        <div class="instructions" id="fly-instructions">
+            <strong>Fly Mode:</strong> W/A/S/D to move, Q/E for altitude, Mouse to look.
+        </div>
+    </div>
+
+    <!-- Import Map for Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -68,6 +68,12 @@ def main():
     
     abs_height = apply_region_calibration(rel_depth, semantic_raw, models)
     
+    # 4.5 Bias-Aware Height Refinement (Stage 5)
+    print("Running Bias-Aware Height Refinement (HTC-DC Net)...")
+    from depthwizard.calibration.htc_refinement import apply_bias_refinement
+    # Will gracefully pass-through if weights aren't found
+    abs_height = apply_bias_refinement(abs_height, weights_path="models/checkpoints/bias/htc_best.pt", device=device)
+    
     # Generate random inlier mask for the sake of confidence map demo
     ransac_inlier_mask = valid_mask.copy()
     
@@ -87,7 +93,21 @@ def main():
         ndsm_kernel=51
     )
     
-    # 6. Plotting to scratch directory
+    # 6. Export 3D Mesh (Stage 7)
+    print("Generating Stage 7 Interactive 3D Mesh (Tiled GLB)...")
+    mesh_out_dir = os.path.join(out_dir, f"{scene_stem}_3d")
+    from depthwizard.products.mesh_generator import export_tiled_scene
+    
+    export_tiled_scene(
+        dsm_path=products["dsm"],
+        imagery_path=imagery_path,
+        output_dir=mesh_out_dir,
+        scene_name=scene_stem,
+        chunk_size=512,
+        z_scale=1.5 # Slight exaggeration for better visualization
+    )
+    
+    # 7. Plotting to scratch directory
     scratch_dir = r"C:\Users\Sumit\.gemini\antigravity-ide\brain\dafccd76-f703-4fd7-8be1-8bf7cf4c77f1\scratch"
     os.makedirs(scratch_dir, exist_ok=True)
     

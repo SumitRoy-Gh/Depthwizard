@@ -61,3 +61,9 @@ def silog_loss(
     d = torch.log(pred_safe[valid_mask]) - torch.log(target_safe[valid_mask])
     loss = torch.mean(d ** 2) - lam * (torch.mean(d) ** 2)
     return loss
+
+
+# ---------------------------------------------------------------------------
+# HTC Loss Export
+# ---------------------------------------------------------------------------
+from .htc_loss import HeadTailCutLoss

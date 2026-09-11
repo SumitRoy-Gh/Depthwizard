@@ -21,6 +21,7 @@ dependencies = [
     "pytest>=8.0.0",
     "matplotlib>=3.8.0",
     "Pillow>=10.0.0",
+    "trimesh>=5.1.0",
 ]
 
 [tool.hatch.build.targets.wheel]
