@@ -22,7 +22,9 @@ import {
   ScrollProgress,
   SplitHeading,
   CharHeading,
+  Magnetic,
 } from "@/components/shared/Motion";
+import { HeroDemo } from "@/components/shared/HeroDemo";
 import { Pill } from "@/components/shared/Pill";
 import { DropZone } from "@/components/upload/DropZone";
 import { SampleTiles } from "@/components/upload/SampleTiles";
@@ -74,28 +76,38 @@ function Hero() {
 
       <Reveal delay={0.55} className="mt-6 max-w-2xl">
         <p className="text-pretty text-base leading-relaxed text-muted md:text-lg">
-          Upload a single aerial image and get back a labeled elevation product —
-          metric or relative, always honest — plus an explorable 3D flythrough.
-
-          No signup. No configuration. No hand-waving.
-
-
-
+          Upload an aerial image. Get back a labeled elevation product and an
+          explorable 3D flythrough — metric when geo tags exist, relative when
+          they don&apos;t. No signup. No configuration. No hand-waving.
         </p>
       </Reveal>
 
       <Reveal delay={0.7} className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Link href="#studio">
-          <button className="group flex items-center gap-2 rounded-full bg-primary px-7 py-3 text-sm font-medium text-void transition-colors hover:bg-cyan hover:text-white">
-            Start a run
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </button>
-        </Link>
-        <Link href="/about">
-          <button className="rounded-full border border-hairline bg-elevated px-7 py-3 text-sm font-medium text-primary transition-colors hover:border-rim">
-            Read the technical notes
-          </button>
-        </Link>
+        <Magnetic>
+          <Link href="#studio">
+            <button className="group flex items-center gap-2 rounded-full bg-primary px-7 py-3 text-sm font-medium text-void transition-colors hover:bg-cyan hover:text-white">
+              Upload an image
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          </Link>
+        </Magnetic>
+        <Magnetic>
+          <Link href="#how-it-works">
+            <button className="rounded-full border border-hairline bg-elevated px-7 py-3 text-sm font-medium text-primary transition-colors hover:border-rim">
+              See how it works
+            </button>
+          </Link>
+        </Magnetic>
+      </Reveal>
+
+      <Reveal delay={0.85} className="mt-14 w-full max-w-3xl">
+        <div className="relative">
+          <div className="pointer-events-none absolute -inset-8 -z-10 bg-[radial-gradient(ellipse_60%_60%_at_50%_40%,rgba(214,116,86,0.09),transparent_70%)]" />
+          <HeroDemo />
+          <div className="absolute right-3 top-3 flex gap-1.5">
+            <Pill tone="cyan">live demo</Pill>
+          </div>
+        </div>
       </Reveal>
 
       <Reveal delay={0.8} className="mt-12 w-full max-w-2xl">
@@ -624,17 +636,21 @@ function FinalCTA() {
           </div>
 
           <div className="relative mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link href="#studio">
-              <button className="group flex items-center gap-2 rounded-full bg-primary px-8 py-3.5 text-sm font-medium text-void transition-colors hover:bg-cyan hover:text-white">
-                Launch the Studio
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-              </button>
-            </Link>
-            <Link href="/history">
-              <button className="rounded-full border border-hairline bg-elevated px-8 py-3.5 text-sm font-medium text-primary transition-colors hover:border-rim">
-                View past runs
-              </button>
-            </Link>
+            <Magnetic>
+              <Link href="#studio">
+                <button className="group flex items-center gap-2 rounded-full bg-primary px-8 py-3.5 text-sm font-medium text-void transition-colors hover:bg-cyan hover:text-white">
+                  Upload an image
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </button>
+              </Link>
+            </Magnetic>
+            <Magnetic>
+              <Link href="/history">
+                <button className="rounded-full border border-hairline bg-elevated px-8 py-3.5 text-sm font-medium text-primary transition-colors hover:border-rim">
+                  View past runs
+                </button>
+              </Link>
+            </Magnetic>
           </div>
 
           <div className="relative mt-8 flex flex-wrap items-center justify-center gap-2">

@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "DepthWizard — From one image, a 3D world.",
     description:
-      "Turn a single overhead image into a labeled elevation productand an interactive 3D flythrough.",
+      "Turn a single overhead image into a labeled elevation product and an interactive 3D flythrough.",
     type: "website",
     siteName: "DepthWizard",
   },
@@ -37,12 +37,12 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "DepthWizard — From one image, a 3D world.",
     description:
-      "Turn a single overhead image into a labeled elevation productand an interactive 3D flythrough.",
+      "Turn a single overhead image into a labeled elevation product and an interactive 3D flythrough.",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FAFAF9",
+  themeColor: "#F5F3ED",
   width: "device-width",
   initialScale: 1,
 };
