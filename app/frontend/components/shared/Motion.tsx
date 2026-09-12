@@ -1,34 +1,45 @@
 "use client";
 
+import { useRef, ReactNode, useEffect } from "react";
 import { motion, useMotionValue, useTransform, useSpring, useInView, useScroll, useVelocity, useReducedMotion } from "framer-motion";
-import { ReactNode, useRef } from "react";
 
-export function Magnetic({ children, strength = 0.25 }: { children: ReactNode; strength?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const sx = useSpring(x, { stiffness: 200, damping: 18 });
-  const sy = useSpring(y, { stiffness: 200, damping: 18 });
+/* ── Magnetic hover wrapper ─────────────────────────────────────────────────
+   Pointer-follows-cursor nudge for buttons/CTAs. Pairs with the `.magnet`
+   CSS class (globals.css) for the smooth return. Disabled for touch-only
+   pointers and prefers-reduced-motion so it never fights accessibility. */
+export function Magnetic({ children, strength = 1 }: { children: ReactNode; strength?: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const reduced = useReducedMotion();
+
+  useEffect(() => {
+    if (reduced || typeof window === "undefined") return;
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    const el = ref.current;
+    if (!el) return;
+
+    const onMove = (e: MouseEvent) => {
+      const r = el.getBoundingClientRect();
+      const dx = ((e.clientX - r.left) / r.width - 0.5) * 10 * strength;
+      const dy = ((e.clientY - r.top) / r.height - 0.5) * 8 * strength;
+      el.style.transform = `translate(${dx}px, ${dy}px)`;
+    };
+    const onLeave = () => {
+      el.style.transform = "";
+    };
+
+    el.addEventListener("mousemove", onMove);
+    el.addEventListener("mouseleave", onLeave);
+    return () => {
+      el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mouseleave", onLeave);
+      el.style.transform = "";
+    };
+  }, [reduced, strength]);
 
   return (
-    <motion.div
-      ref={ref}
-      style={{ x: sx, y: sy }}
-      onMouseMove={(e) => {
-        const rect = ref.current?.getBoundingClientRect();
-        if (!rect) return;
-        const dx = (e.clientX - (rect.left + rect.width / 2)) * strength;
-        const dy = (e.clientY - (rect.top + rect.height / 2)) * strength;
-        x.set(dx);
-        y.set(dy);
-      }}
-      onMouseLeave={() => {
-        x.set(0);
-        y.set(0);
-      }}
-    >
+    <span ref={ref} className="magnet">
       {children}
-    </motion.div>
+    </span>
   );
 }
 
