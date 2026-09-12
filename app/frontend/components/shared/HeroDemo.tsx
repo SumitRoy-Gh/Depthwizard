@@ -111,21 +111,24 @@ export function HeroDemo() {
       const surfaceAlpha =
         phase === "input" ? 0 : phase === "sweep" ? Math.min(1, phaseT * 1.6) : 1;
       const tileAlpha =
-        phase === "input" ? 0.15 + phaseT * 0.85 : phase === "sweep" ? 0.5 : 0.22;
+        phase === "input" ? 0.12 + phaseT * 0.88 : phase === "sweep" ? 0.35 : 0.14;
       const flyT = phase === "fly" ? easeInOut(Math.min(1, phaseT * 1.25)) : 0;
       const spin =
         phase === "fly" ? phaseT * Math.PI * 0.5 : 0;
 
       ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      /* content sits below the panel title bar */
+      ctx.translate(0, 38);
 
       drawTile(
-        ctx, w, h, tileAlpha,
+        ctx, w, h - 38, tileAlpha,
         accent(), faint(), ink(),
         phase === "sweep" ? phaseT : 1,
         1 - flyT * 0.5
       );
 
-      drawSurface(ctx, w, h, surfaceAlpha, flyT, spin, heights, {
+      drawSurface(ctx, w, h - 38, surfaceAlpha, flyT, spin, heights, {
         accent: accent(),
         accentSoft: accentSoft(),
         ink: ink(),
@@ -136,15 +139,16 @@ export function HeroDemo() {
       ctx.font = "500 11px 'JetBrains Mono', ui-monospace, monospace";
       ctx.textAlign = "left";
       ctx.fillStyle = muted();
-      ctx.fillText(`// ${STAGES[stageIdx].label}`, 14, h - 26);
+      ctx.fillText(`// ${STAGES[stageIdx].label}`, 14, h - 64);
       ctx.fillStyle = faint();
-      ctx.fillText(STAGES[stageIdx].note, 14, h - 12);
+      ctx.fillText(STAGES[stageIdx].note, 14, h - 50);
       for (let i = 0; i < STAGES.length; i++) {
         ctx.beginPath();
-        ctx.arc(16 + i * 14, 16, 2.2, 0, Math.PI * 2);
+        ctx.arc(16 + i * 14, 14, 2.2, 0, Math.PI * 2);
         ctx.fillStyle = i === stageIdx ? accent() : "rgba(128,120,108,0.35)";
         ctx.fill();
       }
+      ctx.restore();
     };
 
     if (reduced) {
@@ -163,8 +167,20 @@ export function HeroDemo() {
   return (
     <div
       ref={wrapRef}
-      className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-hairline bg-stage/60"
+      className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-hairline bg-stage/60 shadow-[0_30px_80px_-40px_rgba(20,17,14,0.45)]"
     >
+      {/* Panel chrome — reads as a designed window, not a loose canvas */}
+      <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-2 border-b border-hairline bg-elevated/80 px-4 py-2.5 backdrop-blur">
+        <span className="h-2 w-2 rounded-full bg-rose/70" />
+        <span className="h-2 w-2 rounded-full bg-amber/70" />
+        <span className="h-2 w-2 rounded-full bg-emerald/70" />
+        <span className="ml-2 font-mono text-2xs uppercase tracking-[0.16em] text-faint">
+          depthwizard · pipeline preview
+        </span>
+        <span className="ml-auto font-mono text-2xs uppercase tracking-[0.14em] text-cyan">
+          live
+        </span>
+      </div>
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
     </div>
   );
@@ -241,8 +257,8 @@ function drawTile(
   ctx.fillStyle = faint;
   ctx.fillRect(x0, y0, tw, th);
 
-  /* Grid streets */
-  ctx.globalAlpha = alpha * 0.45;
+  /* Grid streets — quiet, the surface is the hero */
+  ctx.globalAlpha = alpha * 0.28;
   ctx.strokeStyle = accent;
   ctx.lineWidth = 1;
   const cell = tw / 8;
@@ -260,7 +276,7 @@ function drawTile(
   }
 
   /* Rooftops */
-  ctx.globalAlpha = alpha * 0.6;
+  ctx.globalAlpha = alpha * 0.45;
   ctx.fillStyle = accent;
   const roofs: Array<[number, number, number, number]> = [
     [1, 1, 2, 1], [4, 0, 2, 2], [6, 3, 1, 2],

@@ -103,9 +103,6 @@ function Hero() {
         <div className="relative">
           <div className="pointer-events-none absolute -inset-8 -z-10 bg-[radial-gradient(ellipse_60%_60%_at_50%_40%,rgba(214,116,86,0.09),transparent_70%)]" />
           <HeroDemo />
-          <div className="absolute right-3 top-3 flex gap-1.5">
-            <Pill tone="cyan">live demo</Pill>
-          </div>
         </div>
       </Reveal>
 
