@@ -9,6 +9,7 @@ import { StageStepper } from "@/components/processing/StageStepper";
 import { StageThumbnail } from "@/components/processing/StageThumbnail";
 import { ProgressRing } from "@/components/processing/ProgressRing";
 import { Pill } from "@/components/shared/Pill";
+import { Magnetic } from "@/components/shared/Motion";
 import Link from "next/link";
 
 export default function ProcessingPage() {
@@ -120,12 +121,14 @@ export default function ProcessingPage() {
                 <p className="text-sm text-muted">Routing to results viewer…</p>
               </div>
             </div>
-            <Link
-              href={`/results/${params.jobId}`}
-              className="btn-aurora rounded-full border border-emerald/40 bg-emerald/15 px-5 py-2 text-sm font-medium text-emerald"
-            >
-              View results
-            </Link>
+            <Magnetic>
+              <Link
+                href={`/results/${params.jobId}`}
+                className="btn-aurora rounded-full border border-emerald/40 bg-emerald/15 px-5 py-2 text-sm font-medium text-emerald"
+              >
+                View results
+              </Link>
+            </Magnetic>
           </motion.div>
         ) : failed ? (
           <motion.div

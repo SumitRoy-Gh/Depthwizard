@@ -13,7 +13,7 @@ export function Footer() {
               and infrastructure monitoring.
             </p>
             <p className="mt-4 font-mono text-2xs uppercase tracking-[0.18em] text-faint">
-              SIH 26175 · ISRO / Department of Space
+              single-view height estimation
             </p>
           </div>
           <div>
@@ -40,8 +40,8 @@ export function Footer() {
               Built for
             </p>
             <ul className="mt-3 space-y-1.5 text-sm text-muted">
-              <li>SIH 26175 — Single-view height estimation</li>
-              <li>ISRO / Department of Space</li>
+              <li>Single-view height estimation</li>
+              <li>3D flythrough from one image</li>
               <li>Disaster management theme</li>
             </ul>
           </div>

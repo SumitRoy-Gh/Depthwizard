@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
+import { Magnetic } from "@/components/shared/Motion";
 
 export default function NotFound() {
   return (
@@ -30,13 +31,15 @@ export default function NotFound() {
       >
         That page doesn’t exist or the job has expired.
       </motion.p>
-      <Link
-        href="/"
-        className="btn-aurora mt-6 inline-flex items-center gap-2 rounded-full border border-cyan/40 bg-cyan/15 px-5 py-2.5 text-sm font-medium text-cyan shadow-glow"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to studio
-      </Link>
+      <Magnetic>
+        <Link
+          href="/"
+          className="btn-aurora mt-6 inline-flex items-center gap-2 rounded-full border border-cyan/40 bg-cyan/15 px-5 py-2.5 text-sm font-medium text-cyan shadow-glow"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to studio
+        </Link>
+      </Magnetic>
     </div>
   );
 }

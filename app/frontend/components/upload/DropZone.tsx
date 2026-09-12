@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useUpload } from "@/lib/jobs";
 import { useHistory } from "@/store/history-store";
+import { Magnetic } from "@/components/shared/Motion";
 import { cn } from "@/lib/cn";
 import { Pill } from "@/components/shared/Pill";
 
@@ -94,12 +95,16 @@ export function DropZone() {
           </p>
         )}
         <div className="mt-6 flex items-center justify-center gap-2">
-          <button onClick={() => { setPicked(null); setError(null); }} className="rounded-full border border-hairline px-4 py-2 text-sm text-muted hover:text-primary">
-            Choose another
-          </button>
-          <button onClick={onSubmit} disabled={upload.isPending} className="btn-aurora rounded-full border border-cyan/40 bg-cyan/15 px-6 py-2 text-sm font-medium text-cyan shadow-glow hover:bg-cyan/25">
-            {upload.isPending ? "Uploading…" : "Generate Height Model"}
-          </button>
+          <Magnetic>
+            <button onClick={() => { setPicked(null); setError(null); }} className="rounded-full border border-hairline px-4 py-2 text-sm text-muted hover:text-primary">
+              Choose another
+            </button>
+          </Magnetic>
+          <Magnetic>
+            <button onClick={onSubmit} disabled={upload.isPending} className="btn-aurora rounded-full border border-cyan/40 bg-cyan/15 px-6 py-2 text-sm font-medium text-cyan shadow-glow hover:bg-cyan/25">
+              {upload.isPending ? "Uploading…" : "Generate Height Model"}
+            </button>
+          </Magnetic>
         </div>
       </div>
     );
@@ -132,17 +137,12 @@ export function DropZone() {
       <div className="absolute inset-0 -z-10 bg-grid opacity-30" />
 
       <div className="relative flex flex-col items-center px-8 py-16 text-center">
-        <motion.div
-          animate={{ y: isOver ? -6 : 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="relative mb-6"
-        >
-          <div className="absolute inset-0 animate-pulse-glow rounded-full bg-cyan/30 blur-xl" />
+        <div className="relative mb-6">
           <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl border border-cyan/30 bg-cyan/10 text-cyan shadow-glow">
             <UploadCloud className="h-9 w-9" strokeWidth={1.5} />
             <Sparkles className="absolute -right-2 -top-2 h-5 w-5 text-amber" strokeWidth={1.5} />
           </div>
-        </motion.div>
+        </div>
 
         <h3 className="text-2xl font-semibold tracking-tight text-primary">
           {isOver ? "Release to analyze" : "Drop an overhead image"}
@@ -161,12 +161,14 @@ export function DropZone() {
         />
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <button
-            onClick={() => inputRef.current?.click()}
-            className="btn-aurora rounded-full border border-cyan/40 bg-cyan/15 px-6 py-2.5 text-sm font-medium text-cyan shadow-glow transition-all hover:bg-cyan/25"
-          >
-            Browse files
-          </button>
+          <Magnetic>
+            <button
+              onClick={() => inputRef.current?.click()}
+              className="btn-aurora rounded-full border border-cyan/40 bg-cyan/15 px-6 py-2.5 text-sm font-medium text-cyan shadow-glow transition-all hover:bg-cyan/25"
+            >
+              Browse files
+            </button>
+          </Magnetic>
           <kbd className="hidden items-center gap-1 rounded-md border border-hairline bg-elevated/60 px-2 py-1 font-mono text-2xs uppercase tracking-[0.16em] text-muted md:inline-flex">
             <span>⌘ V</span>
             <span className="text-faint">paste</span>
@@ -276,30 +278,34 @@ function PreviewCard({
           )}
 
           <div className="mt-auto flex items-center gap-2">
-            <button
-              onClick={onClear}
-              className="rounded-full border border-hairline px-4 py-2 text-sm text-muted hover:text-primary"
-            >
-              Replace
-            </button>
-            <button
-              onClick={onSubmit}
-              disabled={submitting}
-              className="btn-aurora group/cta flex flex-1 items-center justify-center gap-2 rounded-full border border-cyan/40 bg-cyan/15 px-6 py-2.5 text-sm font-medium text-cyan shadow-glow transition-all hover:bg-cyan/25 hover:shadow-[0_0_32px_-4px_rgba(34,211,238,0.6)] disabled:opacity-50"
-            >
-              {submitting ? (
-                <>
-                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-cyan border-t-transparent" />
-                  Uploading…
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  Generate Height Model
-                  <span className="font-mono text-2xs uppercase tracking-[0.16em] text-cyan/70">⏎</span>
-                </>
-              )}
-            </button>
+            <Magnetic>
+              <button
+                onClick={onClear}
+                className="rounded-full border border-hairline px-4 py-2 text-sm text-muted hover:text-primary"
+              >
+                Replace
+              </button>
+            </Magnetic>
+            <Magnetic>
+              <button
+                onClick={onSubmit}
+                disabled={submitting}
+                className="btn-aurora group/cta flex flex-1 items-center justify-center gap-2 rounded-full border border-cyan/40 bg-cyan/15 px-6 py-2.5 text-sm font-medium text-cyan shadow-glow transition-all hover:bg-cyan/25 hover:shadow-[0_0_32px_-4px_rgba(214,116,86,0.6)] disabled:opacity-50"
+              >
+                {submitting ? (
+                  <>
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-cyan border-t-transparent" />
+                    Uploading…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Generate Height Model
+                    <span className="font-mono text-2xs uppercase tracking-[0.16em] text-cyan/70">⏎</span>
+                  </>
+                )}
+              </button>
+            </Magnetic>
           </div>
         </div>
       </div>

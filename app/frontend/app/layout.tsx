@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     template: "%s · DepthWizard",
   },
   description:
-    "Turn a single overhead image into a labeled elevation product and an interactive 3D flythrough — metric or relative, always honest. Built for SIH 26175.",
+    "Turn a single overhead image into a labeled elevation product and an interactive 3D flythrough — metric or relative, always honest.",
   applicationName: "DepthWizard",
   authors: [{ name: "DepthWizard" }],
   keywords: [
@@ -23,13 +23,12 @@ export const metadata: Metadata = {
     "aerial imagery",
     "DSM",
     "disaster management",
-    "ISRO",
-    "SIH 26175",
+    "single-view depth",
   ],
   openGraph: {
     title: "DepthWizard — From one image, a 3D world.",
     description:
-      "Turn a single overhead image into a labeled elevation productand an interactive 3D flythrough.",
+      "Turn a single overhead image into a labeled elevation product and an interactive 3D flythrough.",
     type: "website",
     siteName: "DepthWizard",
   },
@@ -37,12 +36,12 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "DepthWizard — From one image, a 3D world.",
     description:
-      "Turn a single overhead image into a labeled elevation productand an interactive 3D flythrough.",
+      "Turn a single overhead image into a labeled elevation product and an interactive 3D flythrough.",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FAFAF9",
+  themeColor: "#F5F3ED",
   width: "device-width",
   initialScale: 1,
 };
@@ -53,7 +52,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         {/* Pre-paint theme: light on the landing route (no dark flash). */}
         <script
