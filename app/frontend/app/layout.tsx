@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     template: "%s · DepthWizard",
   },
   description:
-    "Turn a single overhead image into a labeled elevation product and an interactive 3D flythrough — metric or relative, always honest. Built for SIH 26175.",
+    "Turn a single overhead image into a labeled elevation product and an interactive 3D flythrough — metric or relative, always honest.",
   applicationName: "DepthWizard",
   authors: [{ name: "DepthWizard" }],
   keywords: [
@@ -23,8 +23,7 @@ export const metadata: Metadata = {
     "aerial imagery",
     "DSM",
     "disaster management",
-    "ISRO",
-    "SIH 26175",
+    "single-view depth",
   ],
   openGraph: {
     title: "DepthWizard — From one image, a 3D world.",

@@ -42,7 +42,6 @@ export default function HomePage() {
       <Hero />
       <Marquee />
       <Showcase />
-      <Story />
       <Studio />
       <FinalCTA />
     </div>
@@ -59,7 +58,7 @@ function Hero() {
         <div className="flex flex-wrap items-center justify-center gap-2">
           <Pill tone="cyan">
             <span className="h-1.5 w-1.5 rounded-full bg-current" />
-            SIH 26175 · ISRO
+            Aerial · satellite · drone
           </Pill>
           <Pill tone="muted">Single image → elevation</Pill>
           <Pill tone="muted">Disaster management</Pill>
@@ -154,7 +153,7 @@ const MARQUEE_ITEMS = [
   "Metric or relative — always labeled",
   "Explorable 3D",
   "Every stage observable",
-  "ISRO · SIH 26175",
+  "Deployable pipeline",
   "Built for disaster response",
 ];
 
@@ -403,81 +402,7 @@ function Showcase() {
 }
 
 function Story() {
-  return (
-    <section className="relative mx-auto max-w-7xl px-6 py-24">
-      <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-        <RevealOnScroll>
-          <p className="font-mono text-2xs uppercase tracking-[0.18em] text-cyan">Why it matters</p>
-          <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight text-primary md:text-4xl">
-            When one image is all you get.
-          </h2>
-          <div className="mt-5 space-y-4 text-pretty text-sm leading-relaxed text-muted md:text-base">
-            <p>
-              Elevation data anchors disaster response, urban planning and
-              infrastructure monitoring — but stereo pairs, LiDAR and InSAR are
-              expensive, sensor-dependentand slow to deploy when time matters.
-              Sometimes a single archived or freshly tasked optical image is all
-              you have.
-
-
-
-            </p>
-            <p>
-              Depth models estimate relative height from one view; a metric answer
-              needs a reference. DepthWizard routes the honest path: when geo
-              tags exist, it calibrates against a reference DEM and reports meters;
-              when they don't, it says “relative” out loud—and never pretends
-
-
-              otherwise.
-
-
-
-            </p>
-          </div>
-          <div className="mt-6 flex flex-wrap gap-2">
-            <Pill tone="cyan">Metric or relative</Pill>
-            <Pill tone="muted">Pipeline-transparent</Pill>
-            <Pill tone="muted">No signup</Pill>
-            <Pill tone="muted">Explorable 3D</Pill>
-          </div>
-        </RevealOnScroll>
-
-        <RevealOnScroll delay={0.12}>
-          <div className="dot-grid relative overflow-hidden rounded-3xl border border-hairline bg-elevated p-8">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_100%_0%,rgba(14,116,144,0.06),transparent_60%)]" />
-            <p className="relative font-mono text-2xs uppercase tracking-[0.18em] text-cyan">Built for SIH 26175</p>
-            <p className="relative mt-4 text-pretty text-base leading-relaxed text-primary">
-              “No new model architecture, loss function, or training algorithm is
-              proposed. Our contribution is the integration of these existing
-              techniques into a single deployable pipeline — the auto-routing
-              logic,and the interactive 3D visualization layer.”
-            </p>
-            <p className="relative mt-4 text-xs leading-relaxed text-muted">
-              — the novelty statement we hold ourselves to. Every technique is
-              adopted from cited published work; every performance claim is
-              labeled by evidence type.
-
-            </p>
-            <div className="relative mt-6 flex items-center justify-between border-t border-hairline pt-5">
-              <StoryStat value="ISRO" label="Issued by" />
-              <StoryStat value="50 / 50" label="Evaluation weight" />
-              <StoryStat value="3" label="Benchmark datasets" />
-            </div>
-          </div>
-        </RevealOnScroll>
-      </div>
-    </section>
-  );
-}
-
-function StoryStat({ value, label }: { value: string; label: string }) {
-  return (
-    <div>
-      <p className="text-lg font-semibold text-primary">{value}</p>
-      <p className="mt-0.5 font-mono text-2xs uppercase tracking-[0.14em] text-faint">{label}</p>
-    </div>
-  );
+  return null;
 }
 
 const OUTPUTS = [
@@ -613,16 +538,18 @@ function FinalCTA() {
               <span className="ml-3 hidden font-mono text-2xs uppercase tracking-[0.16em] text-white/45 sm:block">
                 depthwizard · run one-liner
               </span>
-              <button
-                onClick={copy}
-                className="ml-auto flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1 font-mono text-2xs text-white/60 transition-colors hover:border-white/40 hover:text-white"
-              >
-                {copied ? (
-                  <><Check className="h-3 w-3 text-[#6EE7B7]" />copied</>
-                ) : (
-                  <><Copy className="h-3 w-3" />copy api call</>
-                )}
-              </button>
+              <Magnetic>
+                <button
+                  onClick={copy}
+                  className="ml-auto flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1 font-mono text-2xs text-white/60 transition-colors hover:border-white/40 hover:text-white"
+                >
+                  {copied ? (
+                    <><Check className="h-3 w-3 text-[#A8C698]" />copied</>
+                  ) : (
+                    <><Copy className="h-3 w-3" />copy api call</>
+                  )}
+                </button>
+              </Magnetic>
             </div>
             <div className="overflow-x-auto px-5 py-4 font-mono text-xs leading-relaxed text-white/85">
               <span className="text-white/40">$ </span>
