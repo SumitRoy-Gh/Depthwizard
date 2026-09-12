@@ -7,6 +7,7 @@ import { EffectComposer, Bloom, Vignette, ChromaticAberration } from "@react-thr
 import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { viridisColor, terrainColor } from "@/lib/colormap";
+import { Magnetic } from "@/components/shared/Motion";
 
 const RES = 96;
 
@@ -242,14 +243,16 @@ export function FlythroughViewer({ seed, exaggeration, colormap }: FlythroughVie
 
         {/* Top-right: flythrough CTA */}
         <div className="pointer-events-auto absolute right-4 top-4 flex items-center gap-2">
-          <button
-            onClick={startFlythrough}
-            disabled={flythrough}
-            className="btn-aurora flex items-center gap-2 rounded-full border border-cyan/40 bg-cyan/15 px-4 py-2 text-sm font-medium text-cyan shadow-glow transition-all hover:bg-cyan/25 disabled:opacity-50"
-          >
-            <PlayIcon />
-            {flythrough ? "Flying…" : "Fly this path"}
-          </button>
+          <Magnetic>
+            <button
+              onClick={startFlythrough}
+              disabled={flythrough}
+              className="btn-aurora flex items-center gap-2 rounded-full border border-cyan/40 bg-cyan/15 px-4 py-2 text-sm font-medium text-cyan shadow-glow transition-all hover:bg-cyan/25 disabled:opacity-50"
+            >
+              <PlayIcon />
+              {flythrough ? "Flying…" : "Fly this path"}
+            </button>
+          </Magnetic>
         </div>
 
         {/* Bottom-right: camera controls hint */}

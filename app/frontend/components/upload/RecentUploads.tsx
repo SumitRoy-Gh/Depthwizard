@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Clock, MapPin, Hash } from "lucide-react";
 import { useState } from "react";
 import { Pill } from "@/components/shared/Pill";
+import { Magnetic } from "@/components/shared/Motion";
 
 export function RecentUploads() {
   const entries = useHistory((s) => s.entries);
@@ -23,12 +24,14 @@ export function RecentUploads() {
             this device
           </span>
         </h3>
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="font-mono text-2xs uppercase tracking-[0.16em] text-faint hover:text-primary"
-        >
-          {open ? "Hide" : "Show"}
-        </button>
+        <Magnetic>
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="font-mono text-2xs uppercase tracking-[0.16em] text-faint hover:text-primary"
+          >
+            {open ? "Hide" : "Show"}
+          </button>
+        </Magnetic>
       </div>
 
       <AnimatePresence>

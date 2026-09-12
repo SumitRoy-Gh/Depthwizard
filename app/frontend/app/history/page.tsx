@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Clock, ArrowRight } from "lucide-react";
 import { useHistory } from "@/store/history-store";
 import { Pill } from "@/components/shared/Pill";
+import { Magnetic } from "@/components/shared/Motion";
 
 export default function HistoryPage() {
   const entries = useHistory((s) => s.entries);
@@ -160,13 +161,15 @@ function EmptyState() {
       <p className="mt-2 text-sm text-muted">
         Once you upload an image, your recent runs will appear here. Sessions are stored in this browser only.
       </p>
-      <Link
-        href="/"
-        className="btn-aurora mt-6 inline-flex items-center gap-2 rounded-full border border-cyan/40 bg-cyan/15 px-5 py-2 text-sm font-medium text-cyan shadow-glow"
-      >
-        Start a run
-        <ArrowRight className="h-4 w-4" />
-      </Link>
+      <Magnetic>
+        <Link
+          href="/"
+          className="btn-aurora mt-6 inline-flex items-center gap-2 rounded-full border border-cyan/40 bg-cyan/15 px-5 py-2 text-sm font-medium text-cyan shadow-glow"
+        >
+          Start a run
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </Magnetic>
     </motion.div>
   );
 }
