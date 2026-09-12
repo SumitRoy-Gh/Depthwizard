@@ -167,32 +167,14 @@
     }
   }
 
-  /* Animated gradient border — for primary CTAs */
+  /* Token-surface CTA — replaced the old spinning conic border
+     (`.btn-aurora::before` + `animation: spin`) which read as noise. */
   .btn-aurora {
-    position: relative;
-    isolation: isolate;
-    background: linear-gradient(180deg, #1E1B17 0%, #262320 100%);
-  }
-  .btn-aurora::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    background: conic-gradient(
-      from 220deg,
-      rgba(214, 116, 86, 0) 0deg,
-      rgba(214, 116, 86, 0.6) 90deg,
-      rgba(168, 198, 152, 0.5) 180deg,
-      rgba(214, 116, 86, 0.6) 270deg,
-      rgba(214, 116, 86, 0) 360deg
+    background: linear-gradient(
+      180deg,
+      rgb(var(--tw-elevated)) 0%,
+      rgb(var(--tw-stage)) 100%
     );
-    z-index: -1;
-    animation: spin 4s linear infinite;
-    opacity: 0;
-    transition: opacity 0.4s var(--ease-out-cubic);
-  }
-  .btn-aurora:hover::before {
-    opacity: 1;
   }
 
   /* Subtle grid background overlay */
@@ -309,9 +291,6 @@
     .text-gradient-aurora {
       animation: none;
     }
-    .btn-aurora::before {
-      animation: none;
-    }
   }
 
 /* ==========================================================================
@@ -423,16 +402,6 @@ html.theme-light .stars {
 }
 html.theme-light .btn-aurora {
   background: linear-gradient(180deg, #ffffff 0%, #f0eee6 100%);
-}
-html.theme-light .btn-aurora::before {
-  background: conic-gradient(
-    from 220deg,
-    rgba(201, 100, 66, 0) 0deg,
-    rgba(201, 100, 66, 0.55) 90deg,
-    rgba(135, 156, 110, 0.5) 180deg,
-    rgba(201, 100, 66, 0.55) 270deg,
-    rgba(201, 100, 66, 0) 360deg
-  );
 }
 html.theme-light .text-gradient-cyan {
   background: linear-gradient(180deg, #1F1E1D 0%, #5A544A 100%);
