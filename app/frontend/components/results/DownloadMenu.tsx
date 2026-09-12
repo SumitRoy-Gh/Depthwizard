@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Download, FileType, Box, MapPinned, Layers } from "lucide-react";
 import { useState } from "react";
 import type { JobStatus } from "@/types/api";
+import { Magnetic } from "@/components/shared/Motion";
 import { cn } from "@/lib/cn";
 
 export function DownloadMenu({ job }: { job: JobStatus }) {
@@ -46,13 +47,15 @@ export function DownloadMenu({ job }: { job: JobStatus }) {
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="btn-aurora flex items-center gap-2 rounded-full border border-cyan/40 bg-cyan/15 px-4 py-2 text-sm font-medium text-cyan shadow-glow transition-all hover:bg-cyan/25"
-      >
-        <Download className="h-4 w-4" />
-        Download
-      </button>
+      <Magnetic>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="btn-aurora flex items-center gap-2 rounded-full border border-cyan/40 bg-cyan/15 px-4 py-2 text-sm font-medium text-cyan shadow-glow transition-all hover:bg-cyan/25"
+        >
+          <Download className="h-4 w-4" />
+          Download
+        </button>
+      </Magnetic>
 
       <AnimatePresence>
         {open && (

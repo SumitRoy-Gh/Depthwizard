@@ -97,6 +97,12 @@ const MODELS = [
   },
 ];
 
+const NOVELTY_STATS = [
+  { value: "8", label: "Pipeline stages" },
+  { value: "3", label: "Benchmark datasets" },
+  { value: "94/94", label: "Preprocessing tests" },
+];
+
 export default function AboutPage() {
   return (
     <div className="relative mx-auto max-w-5xl px-6 py-12 md:py-16">
@@ -110,11 +116,73 @@ export default function AboutPage() {
           What DepthWizard is, and isn’t.
         </h1>
         <p className="mt-4 max-w-2xl text-pretty text-base leading-relaxed text-muted">
-          A research demo for SIH 26175: one optical image in — a labeled
-          elevation product and an explorable 3D flythrough out. Metric when
-          geo tags exist, relative otherwise, honest either way.
+          One optical image in — a labeled elevation product and an explorable
+          3D flythrough out. Metric when geo tags exist, relative otherwise,
+          honest either way.
         </p>
       </motion.div>
+
+      {/* Why it matters — moved from the landing story section */}
+      <section className="mb-12">
+        <h2 className="flex items-center gap-2 font-mono text-2xs uppercase tracking-[0.18em] text-cyan">
+          <Mountain className="h-3.5 w-3.5" />
+          Why it matters
+        </h2>
+
+        <div className="mt-4 grid gap-6 lg:grid-cols-2 lg:items-center">
+          <div className="space-y-4 text-pretty text-sm leading-relaxed text-muted md:text-base">
+            <p>
+              Elevation data anchors disaster response, urban planning and
+              infrastructure monitoring — but stereo pairs, LiDAR and InSAR are
+              expensive, sensor-dependent and slow to deploy when time matters.
+              Sometimes a single archived or freshly tasked optical image is all
+              you have.
+            </p>
+            <p>
+              Depth models estimate relative height from one view; a metric
+              answer needs a reference. DepthWizard routes the honest path: when
+              geo tags exist, it calibrates against a reference DEM and reports
+              meters; when they don&apos;t, it says &ldquo;relative&rdquo; out
+              loud — and never pretends otherwise.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Pill tone="cyan">Metric or relative</Pill>
+              <Pill tone="muted">Pipeline-transparent</Pill>
+              <Pill tone="muted">No signup</Pill>
+              <Pill tone="muted">Explorable 3D</Pill>
+            </div>
+          </div>
+
+          <div className="dot-grid relative overflow-hidden rounded-3xl border border-hairline bg-elevated p-6">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_100%_0%,rgba(201,100,66,0.06),transparent_60%)]" />
+            <p className="relative font-mono text-2xs uppercase tracking-[0.18em] text-cyan">
+              Our novelty statement
+            </p>
+            <p className="relative mt-4 text-pretty text-base leading-relaxed text-primary">
+              &ldquo;No new model architecture, loss function, or training
+              algorithm is proposed. Our contribution is the integration of
+              these existing techniques into a single deployable pipeline — the
+              auto-routing logic, and the interactive 3D visualization
+              layer.&rdquo;
+            </p>
+            <p className="relative mt-4 text-xs leading-relaxed text-muted">
+              — the statement we hold ourselves to. Every technique is adopted
+              from cited published work; every performance claim is labeled by
+              evidence type.
+            </p>
+            <div className="relative mt-6 flex items-center justify-between border-t border-hairline pt-5">
+              {NOVELTY_STATS.map((s) => (
+                <div key={s.label}>
+                  <p className="text-lg font-semibold text-primary">{s.value}</p>
+                  <p className="mt-0.5 font-mono text-2xs uppercase tracking-[0.14em] text-faint">
+                    {s.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Architecture overview */}
       <section className="mb-12">

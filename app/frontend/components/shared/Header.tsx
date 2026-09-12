@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
+import { Magnetic } from "@/components/shared/Motion";
 import { cn } from "@/lib/cn";
 
 const NAV = [
@@ -69,12 +70,14 @@ export function Header() {
             </span>
             Models online
           </div>
-          <Link
-            href="/"
-            className="group relative overflow-hidden rounded-full border border-cyan/30 bg-cyan/10 px-4 py-1.5 text-sm font-medium text-cyan transition-all hover:bg-cyan/20 hover:shadow-glow"
-          >
-            <span className="relative z-10">Launch Studio</span>
-          </Link>
+          <Magnetic>
+            <Link
+              href="/"
+              className="group relative overflow-hidden rounded-full border border-cyan/30 bg-cyan/10 px-4 py-1.5 text-sm font-medium text-cyan transition-all hover:bg-cyan/20 hover:shadow-glow"
+            >
+              <span className="relative z-10">Launch Studio</span>
+            </Link>
+          </Magnetic>
         </div>
       </div>
     </header>
