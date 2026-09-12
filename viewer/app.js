@@ -4,7 +4,8 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls.j
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // Configuration
-const SCENE_PATH = '../data/products/real/area1_3d/scene.json';
+const urlParams = new URLSearchParams(window.location.search);
+const SCENE_PATH = urlParams.get('scene') || '../data/products/real/area5_3d/scene.json';
 
 // Globals
 let scene, camera, renderer, orbitControls, flyControls, raycaster, mouse;
@@ -25,7 +26,7 @@ async function init() {
     // 1. Setup Scene
     const container = document.createElement('div');
     document.body.appendChild(container);
-    
+
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb); // Sky blue
     scene.fog = new THREE.FogExp2(0x87ceeb, 0.001);
@@ -55,7 +56,7 @@ async function init() {
     orbitControls.maxPolarAngle = Math.PI / 2 - 0.01; // Don't go below ground
 
     flyControls = new PointerLockControls(camera, document.body);
-    
+
     // 6. Setup Raycaster for Inspector
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
@@ -64,7 +65,7 @@ async function init() {
     window.addEventListener('resize', onWindowResize);
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
-    
+
     renderer.domElement.addEventListener('click', (e) => {
         if (currentMode === 'orbit') {
             inspectPoint(e.clientX, e.clientY);
@@ -83,14 +84,14 @@ async function loadTerrain() {
     try {
         const response = await fetch(SCENE_PATH);
         const manifest = await response.json();
-        
+
         const loader = new GLTFLoader();
         const basePath = SCENE_PATH.substring(0, SCENE_PATH.lastIndexOf('/') + 1);
-        
+
         // Setup LOD for each chunk
         for (const chunk of manifest.chunks) {
             const lod = new THREE.LOD();
-            
+
             // High detail (LOD0)
             loader.load(basePath + chunk.lods["0"], (gltf) => {
                 const mesh = gltf.scene;
@@ -98,17 +99,17 @@ async function loadTerrain() {
                 lod.addLevel(mesh, 0); // Active when distance < 800
                 terrainChunks.push(mesh); // for raycasting
             });
-            
+
             // Medium detail (LOD1)
             loader.load(basePath + chunk.lods["1"], (gltf) => {
                 const mesh = gltf.scene;
                 mesh.position.fromArray(chunk.position);
                 lod.addLevel(mesh, 800); // Active when distance >= 800
             });
-            
+
             scene.add(lod);
         }
-        
+
     } catch (e) {
         console.error("Failed to load scene data:", e);
     }
@@ -120,13 +121,13 @@ function setupUI() {
     const btnWalk = document.getElementById('btn-walk');
     const crosshair = document.getElementById('crosshair');
     const instructions = document.getElementById('fly-instructions');
-    
+
     const setMode = (mode) => {
         currentMode = mode;
         btnOrbit.className = mode === 'orbit' ? 'active' : '';
         btnFly.className = mode === 'fly' ? 'active' : '';
         btnWalk.className = mode === 'walk' ? 'active' : '';
-        
+
         if (mode === 'orbit') {
             flyControls.unlock();
             orbitControls.enabled = true;
@@ -139,7 +140,7 @@ function setupUI() {
             instructions.style.display = 'block';
         }
     };
-    
+
     btnOrbit.addEventListener('click', () => setMode('orbit'));
     btnFly.addEventListener('click', () => setMode('fly'));
     btnWalk.addEventListener('click', () => setMode('walk'));
@@ -172,17 +173,17 @@ function onKeyUp(event) {
 function inspectPoint(clientX, clientY) {
     mouse.x = (clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(clientY / window.innerHeight) * 2 + 1;
-    
+
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObjects(terrainChunks, true);
-    
+
     if (intersects.length > 0) {
         const point = intersects[0].point;
         // In our coordinate system:
         // X = Easting offset
         // Y = Elevation
         // Z = Northing offset (inverted)
-        
+
         document.getElementById('val-elev').innerText = point.y.toFixed(2);
         document.getElementById('val-latlon').innerText = `X: ${point.x.toFixed(1)}, Y: ${-point.z.toFixed(1)}`;
     }
@@ -193,7 +194,7 @@ function getTerrainHeightAt(x, z) {
     const origin = new THREE.Vector3(x, 2000, z);
     const ray = new THREE.Raycaster(origin, new THREE.Vector3(0, -1, 0));
     const intersects = ray.intersectObjects(terrainChunks, true);
-    
+
     if (intersects.length > 0) {
         return intersects[0].point.y;
     }
@@ -214,7 +215,7 @@ function updateMovement(delta) {
 
     if (moveState.forward || moveState.backward) velocity.z -= direction.z * SPEED * delta;
     if (moveState.left || moveState.right) velocity.x -= direction.x * SPEED * delta;
-    
+
     if (currentMode === 'fly') {
         if (moveState.up) velocity.y += SPEED * 0.5 * delta;
         if (moveState.down) velocity.y -= SPEED * 0.5 * delta;
@@ -222,9 +223,9 @@ function updateMovement(delta) {
 
     flyControls.moveRight(-velocity.x);
     flyControls.moveForward(-velocity.z);
-    
+
     const pos = camera.position;
-    
+
     if (currentMode === 'fly') {
         pos.y += velocity.y;
     } else if (currentMode === 'walk') {
@@ -242,14 +243,14 @@ function onWindowResize() {
 
 function animate() {
     requestAnimationFrame(animate);
-    
+
     const delta = clock.getDelta();
-    
+
     if (currentMode === 'orbit') {
         orbitControls.update();
     } else {
         updateMovement(delta);
     }
-    
+
     renderer.render(scene, camera);
 }

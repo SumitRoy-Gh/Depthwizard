@@ -19,5 +19,7 @@ trimesh>=5.1.0
 # Testing & Quality Assurance
 pytest>=8.0.0
 
-# Editable local installation
--e .
+# API & Web
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-multipart>=0.0.6
