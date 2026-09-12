@@ -1,21 +1,14 @@
 "use client";
 
 /* ── HeroDemo ───────────────────────────────────────────────────────────────
-   A self-contained 2D-canvas animation for the landing hero. It loops:
-     1. An aerial image tile fades in (procedural city block).
-     2. A scanline sweeps down, building an extruded height surface.
-     3. The surface tilts up into a rotating 3D flythrough mesh.
-   Theme-aware via CSS variables, pauses offscreen, honors reduced motion,
-   and uses zero WebGL — so the landing stays fast and SSR-safe.
+   A self-contained 2D-canvas animation for the landing hero. It loops three
+   seamless phases — input tile, height sweep, flythrough — as one continuous
+   visual with no labels or chrome. Theme-aware via CSS variables, pauses
+   offscreen, honors reduced motion, and uses zero WebGL so the landing
+   stays fast and SSR-safe.
    ------------------------------------------------------------------------ */
 
 import { useEffect, useRef } from "react";
-
-const STAGES = [
-  { label: "input", note: "one overhead image" },
-  { label: "estimate", note: "relative height per pixel" },
-  { label: "explore", note: "orbit · pan · zoom" },
-];
 
 type Phase = "input" | "sweep" | "fly";
 
@@ -61,7 +54,6 @@ export function HeroDemo() {
     const accent = () => colorOf("--accent-cyan", "#D67456");
     const accentSoft = () => colorOf("--accent-cyan-glow", "#E89476");
     const ink = () => colorOf("--text-primary", "#EDE9E1");
-    const muted = () => colorOf("--text-muted", "#A0998D");
     const faint = () => colorOf("--text-faint", "#706A60");
 
     /* Deterministic height field — city-block feel */
@@ -109,9 +101,10 @@ export function HeroDemo() {
             : (elapsed - PHASE_MS.input - PHASE_MS.sweep) / PHASE_MS.fly;
 
       const surfaceAlpha =
-        phase === "input" ? 0 : phase === "sweep" ? Math.min(1, phaseT * 1.6) : 1;
+        phase === "input" ? 0 : phase === "sweep" ? smooth(phaseT * 1.35) : 1;
       const tileAlpha =
-        phase === "input" ? 0.12 + phaseT * 0.88 : phase === "sweep" ? 0.35 : 0.14;
+        phase === "input" ? 0.12 + smooth(phaseT) * 0.88 : phase === "sweep" ? 0.35 : 0.14;
+      const inT = phase === "input" ? smooth(phaseT) : phase === "sweep" ? 1 : 0;
       const flyT = phase === "fly" ? easeInOut(Math.min(1, phaseT * 1.25)) : 0;
       const spin =
         phase === "fly" ? phaseT * Math.PI * 0.5 : 0;
@@ -121,38 +114,32 @@ export function HeroDemo() {
       /* content sits below the panel title bar */
       ctx.translate(0, 38);
 
+      /* seamless cross-dissolve between aerial tile and height surface */
+      const tileH = h - 38;
+      ctx.save();
+      ctx.globalAlpha = 1 - inT * 0.85;
       drawTile(
-        ctx, w, h - 38, tileAlpha,
+        ctx, w, tileH, tileAlpha,
         accent(), faint(), ink(),
         phase === "sweep" ? phaseT : 1,
         1 - flyT * 0.5
       );
+      ctx.restore();
 
-      drawSurface(ctx, w, h - 38, surfaceAlpha, flyT, spin, heights, {
+      ctx.save();
+      ctx.globalAlpha = smooth(inT * 1.2);
+      drawSurface(ctx, w, tileH, surfaceAlpha, flyT, spin, heights, {
         accent: accent(),
         accentSoft: accentSoft(),
         ink: ink(),
       });
+      ctx.restore();
 
-      /* Stage caption + progress dots */
-      const stageIdx = phase === "input" ? 0 : phase === "sweep" ? 1 : 2;
-      ctx.font = "500 11px 'JetBrains Mono', ui-monospace, monospace";
-      ctx.textAlign = "left";
-      ctx.fillStyle = muted();
-      ctx.fillText(`// ${STAGES[stageIdx].label}`, 14, h - 64);
-      ctx.fillStyle = faint();
-      ctx.fillText(STAGES[stageIdx].note, 14, h - 50);
-      for (let i = 0; i < STAGES.length; i++) {
-        ctx.beginPath();
-        ctx.arc(16 + i * 14, 14, 2.2, 0, Math.PI * 2);
-        ctx.fillStyle = i === stageIdx ? accent() : "rgba(128,120,108,0.35)";
-        ctx.fill();
-      }
       ctx.restore();
     };
 
     if (reduced) {
-      drawStatic(ctx, w, h, heights, accent(), faint(), muted(), ink());
+      drawStatic(ctx, w, h, heights, accent(), faint(), ink());
     } else {
       raf = requestAnimationFrame(draw);
     }
@@ -187,6 +174,21 @@ export function HeroDemo() {
 }
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
+
+/* smoothstep easing */
+const smooth = (t: number) => {
+  const x = Math.min(1, Math.max(0, t));
+  return x * x * (3 - 2 * x);
+};
+
+/** Parse "#rrggbb" / "#rgb" into [r, g, b]. */
+const hexToRgb = (hex: string, fallback: [number, number, number]): [number, number, number] => {
+  const m = hex.trim().match(/^#([0-9a-f]{6}|[0-9a-f]{3})$/i);
+  if (!m) return fallback;
+  let h = m[1];
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+};
 
 const easeInOut = (t: number) =>
   t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
@@ -342,10 +344,11 @@ function drawSurface(
   const sinS = Math.sin(spin * 0.4);
 
   /* Height-color ramp: dark base → accent for tall */
+  const [ar, ag, ab] = hexToRgb(theme.accent, [214, 116, 86]);
   const ramp = (t: number): string => {
-    const r = Math.round(38 + (214 - 38) * t);
-    const g = Math.round(35 + (116 - 35) * t);
-    const b = Math.round(30 + (86 - 30) * t);
+    const r = Math.round(38 + (ar - 38) * t);
+    const g = Math.round(35 + (ag - 35) * t);
+    const b = Math.round(30 + (ab - 30) * t);
     return `rgba(${r},${g},${b},${0.9 * alpha})`;
   };
 
@@ -366,9 +369,10 @@ function drawSurface(
       const px0 = ux * persp;
       const py0 = uy * persp + (1 - persp) * -sh * 0.28;
 
-      /* orbit */
+      /* orbit + a gentle altitude bob so the flythrough feels airborne */
+      const bob = Math.sin(spin * 0.8 + depth * 2.2) * rowH * 0.35 * flyT;
       const px = cx + px0 * cosS - py0 * sinS;
-      const py = baseY + px0 * sinS + py0 * cosS - hgt * lift * flyT;
+      const py = baseY + px0 * sinS + py0 * cosS - hgt * lift * flyT + bob;
 
       const cellSize = cellW * persp;
 
@@ -401,7 +405,6 @@ function drawStatic(
   heights: Float32Array,
   accent: string,
   faint: string,
-  muted: string,
   ink: string
 ) {
   ctx.clearRect(0, 0, w, h);
@@ -411,9 +414,4 @@ function drawStatic(
     heights,
     { accent, accentSoft: accent, ink }
   );
-  ctx.font = "500 11px 'JetBrains Mono', ui-monospace, monospace";
-  ctx.fillStyle = muted;
-  ctx.fillText("// explore", 14, h - 26);
-  ctx.fillStyle = faint;
-  ctx.fillText("orbit · pan · zoom", 14, h - 12);
 }
