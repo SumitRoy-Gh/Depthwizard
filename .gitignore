@@ -2,19 +2,19 @@
 # DepthWizard (SIH175) Git Ignore Rules
 # Tailored specifically for workspace structure
 # ==========================================
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+app/frontend/.env.local
+app/frontend/.env.*.local
+!app/frontend/.env.local.example
 
-# 1. Virtual Environments
+# Python environments, caches, and build output
 .venv/
 env/
 venv/
-
-# 2. Python Caches & Build Artifacts
 __pycache__/
-preprocessing/__pycache__/
-preprocessing/ingest/__pycache__/
-preprocessing/pipelines/__pycache__/
-preprocessing/stages/__pycache__/
-preprocessing/tests/__pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
@@ -22,56 +22,49 @@ build/
 dist/
 *.egg-info/
 
-# 3. Data Directories & Heavy Raster Files
-# Ignore all raw, synthetic, demo outputs, and intermediate data files
-data/
-sample.tif
+# # JavaScript dependencies and Next.js output
+# app/frontend/node_modules/
+# app/frontend/.next/
+# app/frontend/out/
+# app/frontend/tsconfig.tsbuildinfo
+# app/frontend/next-env.d.ts
+# app/frontend/*.log
+# app/frontend/AGENTS.md
+# app/frontend/CLAUDE.md
 
-# Ignore all standalone geospatial raster binary formats
+# Heavy runtime assets: copy these separately or use Git LFS/object storage
+models/
+dataset/
+data/
 *.tif
 *.tiff
 *.geotiff
+!/area2_imagery.tif
 *.tfw
 *.prj
-*.png.aux.xml
-
-# 4. Model Checkpoints & Statistics
-.pt
+*.pt
 *.pth
 *.ckpt
 *.onnx
 *.safetensors
-weights/
-checkpoints/
 stats.json
 
-# 5. Logs & Experiment Outputs
+# Generated logs and experiment output
 *.log
 runs/
 logs/
 wandb/
 .tensorboard/
 
-# 6. OS & IDE Metadata
+# Archives and generated reports
+*.zip
+*.pdf
+
+# OS and IDE metadata
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
 *.swp
 *.swo
-
-# 7. Frontend (Next.js)
-frontend/node_modules/
-frontend/.next/
-frontend/out/
-frontend/.env.local
-frontend/.env*.local
-frontend/*.log
-DOCS/DepthWizard_Technical_Documentation.docx
-DOCS/STATUS.md
-
-*.zip
-*.pdf
-*.docx
-
 *.env
