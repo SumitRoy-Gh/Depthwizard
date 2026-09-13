@@ -106,38 +106,8 @@ function Hero() {
         </div>
       </Reveal>
 
-      <Reveal delay={0.8} className="mt-12 w-full max-w-2xl">
-        <div className="grid grid-cols-3 divide-x divide-hairline rounded-2xl border border-hairline bg-elevated">
-          <HeroStat label="Observable stages" value="8" />
-          <HeroStat label="Preprocessing tests" value="94 / 94" />
-          <HeroStat label="Image → flythrough" value="< 90 s" />
-        </div>
-      </Reveal>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.6, duration:  1 }}
-        className="pointer-events-none absolute bottom-5 left-1/2 hidden -translate-x-1/2 md:block"
-      >
-        <div className="flex h-9 w-5 items-start justify-center rounded-full border border-rim p-1.5">
-          <motion.div
-            animate={{ y: [0, 10, 0], opacity: [1, 0.2, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-            className="h-1.5 w-1 rounded-full bg-cyan"
-          />
-        </div>
-      </motion.div>
+      {/* ── Marquee divider ─────────────────────────────────────────── */}
     </section>
-  );
-}
-
-function HeroStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="px-4 py-4">
-      <p className="font-mono text-2xs uppercase tracking-[0.16em] text-faint">{label}</p>
-      <p className="mt-1 text-lg font-semibold tabular-nums text-primary">{value}</p>
-    </div>
   );
 }
 
