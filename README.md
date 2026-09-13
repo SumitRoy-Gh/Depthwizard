@@ -59,6 +59,26 @@ To swap the mock backend for the real one, edit [`frontend/lib/jobs.ts`](./front
 
 ---
 
+## Running the Real Backend (Local Setup)
+
+If you prefer to run the backend natively without Docker, ensure you have Python 3.14+ (or `uv`) and install the dependencies:
+
+### 1. Environment Setup
+Create a `.env` file from the `.env.example` template:
+```bash
+cp .env.example .env
+```
+Ensure you set the `OPENTOPOGRAPHY_API_KEY` in `.env` (required for fetching coarse DEM tiles for calibration). You can register for a free API key at [OpenTopography](https://portal.opentopography.org/myopentopo).
+
+### 2. Start the Uvicorn Server
+```bash
+uv sync
+uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+The API will be available at `http://localhost:8000`.
+
+---
+
 ## Running the Real Backend (FastAPI + Docker)
 
 The actual Deep Learning backend (powered by PyTorch and DepthAnythingV2) is fully containerized. It automatically falls back to CPU if a GPU is unavailable.
@@ -111,128 +131,3 @@ Depthwizard/
 
 ---
 
-## Testing
-
-Run the full preprocessing test suite:
-
-```bash
-uv run python preprocessing/tests/test_all.py
-```
-
-**94 tests across 10 groups** (radiometric, masking, denoise, CLAHE, resolution, tiling, normalization, + E2E pipelines).
-
-To test on a real raster:
-
-```bash
-uv run python preprocessing/tests/test_real_tif.py "path/to/image.tif"
-```
-
-Outputs: file format, dimensions, native GSD, CRS, processing time, valid mask stats.
-
----
-
-## Frontend Routes
-
-| Route | Purpose |
-|---|---|
-| `/` | Landing + upload + samples + showcase |
-| `/processing/:jobId` | Live 8-stage stepper + per-stage thumbnails |
-| `/results/:jobId` | 2D map + 3D flythrough + controls |
-| `/results/:jobId/compare` | Raw depth vs calibrated height slider |
-| `/history` | Session-scoped past runs |
-| `/about` | Model info + honest scope |
-| `/settings` | Display / export / pipeline prefs |
-
-**Keyboard shortcuts:**  
-`Cmd/Ctrl + V` → paste image  |  `/` → focus upload  |  `Drag` → orbit  |  `Scroll` → zoom
-
----
-
-## Documentation
-
-| File | Contents |
-|---|---|
-| [`DOCS/PRD.md`](./DOCS/PRD.md) | Vision, users, success metrics |
-| [`DOCS/ARCHITECTURE.md`](./DOCS/ARCHITECTURE.md) | System diagrams, stack, contracts, perf budget |
-| [`DOCS/TECHSTACK.md`](./DOCS/TECHSTACK.md) | Tech choices + rationale |
-| [`DOCS/STATUS.md`](./DOCS/STATUS.md) | Live phase tracker (Backend / Frontend / Integration) |
-| [`DOCS/FLOW.md`](./DOCS/FLOW.md) | User flows + animation keyframes |
-| [`DOCS/Pre-Processing DOCS/`](./DOCS/Pre-Processing%20DOCS/) | Per-stage math + verification guide |
-
----
-
-## What This Is Not
-
-See [`DOCS/STATUS.md`](./DOCS/STATUS.md) §Phase B7 for full details:
-
-- ❌ Not real-time multi-user — sessions are local-only
-- ❌ Not sub-decimeter on arbitrary phone photos — accuracy only on ISPRS benchmarks
-- ❌ Not a LiDAR / survey replacement
-- ❌ Not certified for safety-critical decisions
-
----
-
-## Roadmap
-
-### ✅ Shipped
-
-- 7-stage preprocessing pipeline (94/94 tests passing)
-- Inference ingest with GeoTIFF auto-detection
-- Full Next.js frontend + 3D flythrough + 7 routes
-- Cinematic camera tour ("Fly this path")
-- Raw vs calibrated comparison view
-- Session-scoped history with localStorage
-- Light landing + dark cinematic app theme
-
-### 🚧 In Progress
-
-- Depth backbone fine-tuning + calibration (ML track)
-- Backend FastAPI service + job orchestration
-- Real artifact exports (GLB, GeoTIFF, PDF)
-
-### 🔮 Future / Stretch
-
-- Batch upload
-- User accounts + multi-session history
-- PWA / offline support
-- E2E tests (Playwright)
-- Vercel deployment
-
----
-
-## Datasets & Attribution
-
-Trained and validated on public aerial benchmarks:
-
-- **ISPRS Vaihingen** — 9 cm/px + LiDAR DSM ground truth
-- **ISPRS Potsdam** — 5 cm/px + LiDAR DSM ground truth
-- **DFC2019** — multi-platform overhead benchmark
-
-Models: **Depth Anything v2** (fine-tuned), **semantic segmentation**, **per-region RANSAC** (SRTM / Copernicus).
-
----
-
-## Resources
-
-- 📚 [Full Architecture](./DOCS/ARCHITECTURE.md)
-- 📖 [Product Requirements](./DOCS/PRD.md)
-- 🔧 [Preprocessing Specs](./DOCS/Pre-Processing%20DOCS/)
-- 📊 [Live Status Tracker](./DOCS/STATUS.md)
-
----
-
-## License
-
-Built by **DepthWizard** for **SIH 26175** (Smart India Hackathon 2026 — ISRO / Department of Space).
-
-Third-party models retain their original licenses:
-- **Depth Anything v2** — Depth Anything team license
-- **ISPRS Vaihingen / Potsdam** — free for scientific use with attribution
-- **DFC2019** — open benchmark
-- **Fonts** — SIL Open Font License
-
----
-
-<p align="center">
-  <sub>DepthWizard · Light landing / Dark app · Viridis colormaps · SIH 26175 · 2026</sub>
-</p>
