@@ -27,8 +27,6 @@ import {
 import { HeroDemo } from "@/components/shared/HeroDemo";
 import { Pill } from "@/components/shared/Pill";
 import { DropZone } from "@/components/upload/DropZone";
-import { SampleTiles } from "@/components/upload/SampleTiles";
-import { AdvancedOptions } from "@/components/upload/AdvancedOptions";
 import { RecentUploads } from "@/components/upload/RecentUploads";
 import { cn } from "@/lib/cn";
 
@@ -408,21 +406,6 @@ function Studio() {
             <DropZone />
           </RevealOnScroll>
 
-          <RevealOnScroll delay={0.12}>
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-hairline" />
-              <span className="font-mono text-2xs uppercase tracking-[0.18em] text-faint">or try a sample</span>
-              <span className="h-px flex-1 bg-hairline" />
-            </div>
-          </RevealOnScroll>
-
-          <RevealOnScroll delay={0.16}>
-            <SampleTiles />
-          </RevealOnScroll>
-
-          <RevealOnScroll delay={0.2}>
-            <AdvancedOptions />
-          </RevealOnScroll>
 
           <RevealOnScroll delay={0.24}>
             <RecentUploads />
