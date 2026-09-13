@@ -59,6 +59,26 @@ To swap the mock backend for the real one, edit [`frontend/lib/jobs.ts`](./front
 
 ---
 
+## Running the Real Backend (Local Setup)
+
+If you prefer to run the backend natively without Docker, ensure you have Python 3.14+ (or `uv`) and install the dependencies:
+
+### 1. Environment Setup
+Create a `.env` file from the `.env.example` template:
+```bash
+cp .env.example .env
+```
+Ensure you set the `OPENTOPOGRAPHY_API_KEY` in `.env` (required for fetching coarse DEM tiles for calibration). You can register for a free API key at [OpenTopography](https://portal.opentopography.org/myopentopo).
+
+### 2. Start the Uvicorn Server
+```bash
+uv sync
+uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+The API will be available at `http://localhost:8000`.
+
+---
+
 ## Running the Real Backend (FastAPI + Docker)
 
 The actual Deep Learning backend (powered by PyTorch and DepthAnythingV2) is fully containerized. It automatically falls back to CPU if a GPU is unavailable.
