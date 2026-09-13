@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { Magnetic } from "@/components/shared/Motion";
 import { cn } from "@/lib/cn";
+import { isBackendUp } from "@/lib/real-api";
 
 const NAV = [
   { href: "/", label: "Studio" },
@@ -15,6 +17,19 @@ const NAV = [
 export function Header() {
   const pathname = usePathname();
   const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+  const [backendUp, setBackendUp] = useState(isDemo);
+
+  useEffect(() => {
+    if (isDemo) return;
+    let active = true;
+    const check = () => isBackendUp().then((up) => active && setBackendUp(up));
+    check();
+    const interval = window.setInterval(check, 10000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [isDemo]);
 
   return (
     <header className="site-header sticky top-0 z-40">
@@ -63,12 +78,21 @@ export function Header() {
               Demo · mock backend
             </div>
           )}
-          <div className="hidden items-center gap-2 rounded-full border border-hairline bg-elevated/70 px-3 py-1.5 font-mono text-2xs uppercase tracking-[0.16em] text-muted lg:flex">
+          <div className={cn(
+            "hidden items-center gap-2 rounded-full border bg-elevated/70 px-3 py-1.5 font-mono text-2xs uppercase tracking-[0.16em] lg:flex",
+            backendUp ? "border-hairline text-muted" : "border-rose/30 text-rose"
+          )}>
             <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald/60" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald" />
+              <span className={cn(
+                "absolute inline-flex h-full w-full rounded-full",
+                backendUp ? "animate-ping bg-emerald/60" : "bg-rose/60"
+              )} />
+              <span className={cn(
+                "relative inline-flex h-1.5 w-1.5 rounded-full",
+                backendUp ? "bg-emerald" : "bg-rose"
+              )} />
             </span>
-            Models online
+            {backendUp ? "Models online" : "Backend offline"}
           </div>
           <Magnetic>
             <Link

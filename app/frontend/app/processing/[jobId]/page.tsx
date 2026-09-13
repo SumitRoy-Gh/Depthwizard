@@ -58,7 +58,7 @@ export default function ProcessingPage() {
 
   const completed = data.stages.filter((s) => s.status === "complete").length;
   const total = data.stages.length;
-  const progress = completed / total;
+  const progress = total > 0 ? completed / total : data.overall === "complete" ? 1 : 0;
   const activeIndex = data.stages.findIndex((s) => s.status === "running");
   const failed = data.overall === "failed";
   const completedAll = data.overall === "complete";

@@ -12,12 +12,18 @@ let scene, camera, renderer, orbitControls, flyControls, raycaster, mouse;
 let currentMode = 'orbit'; // orbit, fly, walk
 let terrainChunks = [];
 let clock = new THREE.Clock();
+let terrainBounds = { minX: -100, maxX: 100, minZ: -100, maxZ: 100 };
+let terrainScale = 100;
+let terrainBox = new THREE.Box3();
+let loadedTerrainChunks = 0;
+let expectedTerrainChunks = 0;
+let terrainFramed = false;
 
 // Movement state for fly/walk
 const moveState = { forward: false, backward: false, left: false, right: false, up: false, down: false };
 const velocity = new THREE.Vector3();
 const direction = new THREE.Vector3();
-const SPEED = 50.0;
+const SPEED = 12.0;
 
 init();
 animate();
@@ -32,8 +38,7 @@ async function init() {
     scene.fog = new THREE.FogExp2(0x87ceeb, 0.001);
 
     // 2. Setup Camera
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
-    camera.position.set(0, 500, 500);
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
 
     // 3. Setup Lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -85,6 +90,25 @@ async function loadTerrain() {
         const response = await fetch(SCENE_PATH);
         const manifest = await response.json();
 
+        // The mesh is exported in metres. Match the camera and controls to the
+        // actual footprint instead of assuming a fixed world size.
+        const halfWidth = Number(manifest.width_m || 200) / 2;
+        const halfHeight = Number(manifest.height_m || 200) / 2;
+        terrainBounds = {
+            minX: -halfWidth,
+            maxX: halfWidth,
+            minZ: -halfHeight,
+            maxZ: halfHeight,
+        };
+        terrainScale = Math.max(halfWidth, halfHeight);
+        expectedTerrainChunks = manifest.chunks.length;
+        const viewHeight = Math.max(35, terrainScale * 0.9);
+        camera.position.set(0, viewHeight, viewHeight * 0.9);
+        orbitControls.target.set(0, 0, 0);
+        orbitControls.minDistance = Math.max(4, terrainScale * 0.03);
+        orbitControls.maxDistance = terrainScale * 2.2;
+        orbitControls.update();
+
         const loader = new GLTFLoader();
         const basePath = SCENE_PATH.substring(0, SCENE_PATH.lastIndexOf('/') + 1);
 
@@ -98,6 +122,15 @@ async function loadTerrain() {
                 mesh.position.fromArray(chunk.position);
                 lod.addLevel(mesh, 0); // Active when distance < 800
                 terrainChunks.push(mesh); // for raycasting
+                terrainBox.expandByObject(mesh);
+                loadedTerrainChunks += 1;
+                // Frame as soon as the first real mesh arrives. Waiting for
+                // every optional LOD chunk can leave the camera at fallback
+                // coordinates if one request is slow or fails.
+                if (!terrainFramed) {
+                    terrainFramed = true;
+                    frameTerrain();
+                }
             });
 
             // Medium detail (LOD1)
@@ -113,6 +146,31 @@ async function loadTerrain() {
     } catch (e) {
         console.error("Failed to load scene data:", e);
     }
+}
+
+function frameTerrain() {
+    if (terrainBox.isEmpty()) return;
+
+    const center = new THREE.Vector3(0, terrainBox.getCenter(new THREE.Vector3()).y, 0);
+    const horizontalSpan = Math.max(
+        terrainBounds.maxX - terrainBounds.minX,
+        terrainBounds.maxZ - terrainBounds.minZ
+    );
+    const viewingDistance = Math.max(35, horizontalSpan * 0.85);
+    const terrainTop = terrainBox.max.y;
+
+    terrainScale = Math.max(terrainScale, horizontalSpan / 2);
+    camera.near = 0.1;
+    camera.far = Math.max(2000, viewingDistance * 8);
+    camera.position.set(
+        center.x,
+        terrainTop + viewingDistance * 0.7,
+        center.z + viewingDistance * 0.85
+    );
+    orbitControls.target.copy(center);
+    orbitControls.minDistance = Math.max(4, horizontalSpan * 0.03);
+    orbitControls.maxDistance = viewingDistance * 3;
+    orbitControls.update();
 }
 
 function setupUI() {
@@ -225,9 +283,16 @@ function updateMovement(delta) {
     flyControls.moveForward(-velocity.z);
 
     const pos = camera.position;
+    const margin = Math.max(1, terrainScale * 0.015);
+    pos.x = THREE.MathUtils.clamp(pos.x, terrainBounds.minX + margin, terrainBounds.maxX - margin);
+    pos.z = THREE.MathUtils.clamp(pos.z, terrainBounds.minZ + margin, terrainBounds.maxZ - margin);
 
     if (currentMode === 'fly') {
-        pos.y += velocity.y;
+        pos.y = THREE.MathUtils.clamp(
+            pos.y + velocity.y,
+            terrainBox.isEmpty() ? 5 : terrainBox.min.y + 3,
+            terrainBox.isEmpty() ? terrainScale * 1.5 : terrainBox.max.y + terrainScale
+        );
     } else if (currentMode === 'walk') {
         // Stick to terrain
         const th = getTerrainHeightAt(pos.x, pos.z);
@@ -248,6 +313,17 @@ function animate() {
 
     if (currentMode === 'orbit') {
         orbitControls.update();
+        const margin = Math.max(1, terrainScale * 0.015);
+        orbitControls.target.x = THREE.MathUtils.clamp(
+            orbitControls.target.x,
+            terrainBounds.minX + margin,
+            terrainBounds.maxX - margin
+        );
+        orbitControls.target.z = THREE.MathUtils.clamp(
+            orbitControls.target.z,
+            terrainBounds.minZ + margin,
+            terrainBounds.maxZ - margin
+        );
     } else {
         updateMovement(delta);
     }

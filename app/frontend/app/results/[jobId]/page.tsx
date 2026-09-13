@@ -112,6 +112,7 @@ export default function ResultsPage() {
               seed={seed}
               exaggeration={exaggeration}
               colormap={colormap}
+              meshUrl={data.artifacts?.meshUrl}
             />
           </motion.div>
 
@@ -121,7 +122,7 @@ export default function ResultsPage() {
             transition={{ delay: 0.15 }}
             className="relative aspect-[16/7] overflow-hidden rounded-2xl border border-white/8"
           >
-            <MapPanel georeferenced={data.meta.isGeoreferenced} />
+            <MapPanel heightmapDataUrl={data.artifacts?.heightmapUrl} />
           </motion.div>
 
           <MetadataStrip meta={data.meta} />
@@ -145,7 +146,7 @@ export default function ResultsPage() {
                 Heights are reported as <strong>relative</strong> values — this image was not georeferenced, so elevations are not in real-world units.
               </p>
               <p className="mt-2 text-xs text-muted">
-                GeoTIFF export is disabled. PNG heightmap and GLB mesh remain available.
+                Metric GeoTIFF export is disabled. The DSM raster and generated terrain viewer remain available.
               </p>
             </div>
           )}

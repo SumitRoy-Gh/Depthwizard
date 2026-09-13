@@ -33,7 +33,7 @@ import { RecentUploads } from "@/components/upload/RecentUploads";
 import { cn } from "@/lib/cn";
 
 const COPY_CMD =
-  "curl -X POST -F \"image=@your_tile.tif\" $DEPTHWIZARD_API/ingest";
+  "curl -X POST -F \"file=@your_tile.tif\" $DEPTHWIZARD_API/process";
 
 export default function HomePage() {
   return (

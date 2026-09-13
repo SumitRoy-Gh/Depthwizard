@@ -13,18 +13,56 @@ export function DownloadMenu({ job }: { job: JobStatus }) {
   const items = [
     {
       key: "mesh",
-      label: "GLB mesh",
-      sub: "3D mesh · Three.js compatible",
+      label: "3D terrain viewer",
+      sub: "Orbit, fly, and walk the generated scene",
       icon: Box,
       available: !!job.artifacts?.meshUrl,
+      href: job.artifacts?.meshUrl,
       tone: "cyan",
     },
     {
       key: "heightmap",
-      label: "PNG heightmap",
-      sub: "Viridis-colored heightmap",
+      label: "DSM raster",
+      sub: "Generated surface elevation GeoTIFF",
       icon: Layers,
       available: !!job.artifacts?.heightmapUrl,
+      href: job.artifacts?.heightmapUrl,
+      tone: "cyan",
+    },
+    {
+      key: "ndsm",
+      label: "nDSM raster",
+      sub: "Above-ground height GeoTIFF",
+      icon: Layers,
+      available: !!job.artifacts?.ndsmUrl,
+      href: job.artifacts?.ndsmUrl,
+      tone: "cyan",
+    },
+    {
+      key: "slope",
+      label: "Slope raster",
+      sub: "Terrain slope in degrees",
+      icon: Layers,
+      available: !!job.artifacts?.slopeUrl,
+      href: job.artifacts?.slopeUrl,
+      tone: "cyan",
+    },
+    {
+      key: "hillshade",
+      label: "Hillshade raster",
+      sub: "Shaded relief GeoTIFF",
+      icon: Layers,
+      available: !!job.artifacts?.hillshadeUrl,
+      href: job.artifacts?.hillshadeUrl,
+      tone: "cyan",
+    },
+    {
+      key: "confidence",
+      label: "Confidence raster",
+      sub: "Prediction confidence GeoTIFF",
+      icon: Layers,
+      available: !!job.artifacts?.confidenceUrl,
+      href: job.artifacts?.confidenceUrl,
       tone: "cyan",
     },
     {
@@ -33,6 +71,7 @@ export function DownloadMenu({ job }: { job: JobStatus }) {
       sub: job.meta.metric ? "Metric raster · CRS preserved" : "Unavailable — not georeferenced",
       icon: MapPinned,
       available: !!job.artifacts?.geotiffUrl,
+      href: job.artifacts?.geotiffUrl,
       tone: job.meta.metric ? "cyan" : "muted",
     },
     {
@@ -41,6 +80,7 @@ export function DownloadMenu({ job }: { job: JobStatus }) {
       sub: "Summary + dataset credits",
       icon: FileType,
       available: !!job.artifacts?.pdfUrl,
+      href: job.artifacts?.pdfUrl,
       tone: "cyan",
     },
   ] as const;
@@ -70,18 +110,8 @@ export function DownloadMenu({ job }: { job: JobStatus }) {
             >
               {items.map((item) => {
                 const Icon = item.icon;
-                return (
-                  <button
-                    key={item.key}
-                    disabled={!item.available}
-                    onClick={() => setOpen(false)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors",
-                      item.available
-                        ? "hover:bg-white/5"
-                        : "cursor-not-allowed opacity-50"
-                    )}
-                  >
+                const content = (
+                  <>
                     <div className={cn(
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
                       item.available ? "bg-cyan/10 text-cyan" : "bg-white/5 text-muted"
@@ -94,9 +124,30 @@ export function DownloadMenu({ job }: { job: JobStatus }) {
                         {item.sub}
                       </p>
                     </div>
-                    {item.available && (
-                      <Download className="h-3.5 w-3.5 text-muted" />
+                    {item.available && <Download className="h-3.5 w-3.5 text-muted" />}
+                  </>
+                );
+
+                return item.available && item.href ? (
+                  <a
+                    key={item.key}
+                    href={item.href}
+                    target={item.key === "mesh" ? "_blank" : undefined}
+                    rel={item.key === "mesh" ? "noreferrer" : undefined}
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-white/5"
                     )}
+                  >
+                    {content}
+                  </a>
+                ) : (
+                  <button
+                    key={item.key}
+                    disabled
+                    className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 text-left opacity-50"
+                  >
+                    {content}
                   </button>
                 );
               })}

@@ -61,14 +61,22 @@ export function DropZone() {
     try {
       const result = await upload.mutateAsync(picked);
       const isGeo = picked.name.toLowerCase().endsWith(".tif") || picked.name.toLowerCase().endsWith(".tiff");
-      addHistory({
-        jobId: result.jobId,
-        filename: picked.name,
-        thumbnailDataUrl: preview ?? undefined,
-        isGeoreferenced: isGeo,
-        metric: isGeo,
-        timestamp: Date.now(),
-      });
+      try {
+        addHistory({
+          jobId: result.jobId,
+          filename: picked.name,
+          thumbnailDataUrl: preview ?? undefined,
+          isGeoreferenced: isGeo,
+          metric: isGeo,
+          timestamp: Date.now(),
+        });
+      } catch {
+        try {
+          window.localStorage.removeItem("depthwizard-history");
+        } catch {
+          // Ignore storage failures; navigation must continue.
+        }
+      }
       router.push(`/processing/${result.jobId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed.");

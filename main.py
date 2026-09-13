@@ -15,6 +15,7 @@ import numpy as np
 import torch
 from pathlib import Path
 from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
@@ -52,6 +53,18 @@ app = FastAPI(
     description="End-to-End single-view height estimation and 3D generation.",
     version="2.0.0",
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 UPLOAD_DIR = Path("data/uploads")
 PRODUCTS_DIR = Path("data/products")
@@ -249,6 +262,13 @@ async def process_image(file: UploadFile = File(...)):
             "products": {k: f"/static/{job_id}/{Path(v).name}" for k, v in products.items()},
             "scene_manifest": f"/static/{job_id}_3d/scene.json",
             "viewer_url": f"/viewer/index.html?scene=/static/{job_id}_3d/scene.json",
+            "meta": {
+                "width": int(imagery_raw.shape[1]),
+                "height": int(imagery_raw.shape[0]),
+                "crs": meta.crs,
+                "gsd_m": meta.gsd_m,
+                "is_georeferenced": bool(meta.crs),
+            },
         })
 
     except Exception as e:

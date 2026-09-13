@@ -52,6 +52,11 @@ export interface JobStatus {
     meshUrl?: string;
     heightmapUrl?: string;
     geotiffUrl?: string;
+    ndsmUrl?: string;
+    dtmUrl?: string;
+    slopeUrl?: string;
+    hillshadeUrl?: string;
+    confidenceUrl?: string;
     pdfUrl?: string;
     rawDepthUrl?: string;
     correctedDepthUrl?: string;

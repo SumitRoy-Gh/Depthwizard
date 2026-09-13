@@ -21,6 +21,17 @@ export const useHistory = create<HistoryState>()(
         set((s) => ({ entries: s.entries.filter((x) => x.jobId !== jobId) })),
       clear: () => set({ entries: [] }),
     }),
-    { name: "depthwizard-history", version: 1 }
+    {
+      name: "depthwizard-history",
+      version: 1,
+      partialize: (state) => ({
+        entries: state.entries.map(({ thumbnailDataUrl, ...entry }) => ({
+          ...entry,
+          ...(thumbnailDataUrl && thumbnailDataUrl.length <= 100_000
+            ? { thumbnailDataUrl }
+            : {}),
+        })),
+      }),
+    }
   )
 );
