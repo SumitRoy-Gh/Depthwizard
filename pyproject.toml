@@ -6,8 +6,7 @@ build-backend = "hatchling.build"
 name = "depthwizard"
 version = "0.1.0"
 description = "Single-View Height Estimation and 3D Flythrough from optical imagery."
-readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.5.2",
     "opencv-python>=5.0.0.93",

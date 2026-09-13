@@ -59,25 +59,54 @@ To swap the mock backend for the real one, edit [`frontend/lib/jobs.ts`](./front
 
 ---
 
+## Running the Real Backend (FastAPI + Docker)
+
+The actual Deep Learning backend (powered by PyTorch and DepthAnythingV2) is fully containerized. It automatically falls back to CPU if a GPU is unavailable.
+
+### 1. Build the Docker Image
+```bash
+docker build -t depthwizard-api .
+```
+
+### 2. Run the Container
+We use Volume Mounts (`-v`) so you don't have to copy massive AI models or datasets directly into the container. 
+
+**Standard Run (CPU):**
+```bash
+# Replace /path/to/repo with the actual absolute path to your cloned repository
+docker run -p 8000:8000 \
+  -v "/path/to/repo/models:/app/models" \
+  -v "/path/to/repo/data:/app/data" \
+  -v "/path/to/repo/dataset:/app/dataset" \
+  depthwizard-api
+```
+
+**NVIDIA GPU Run (Warp Speed):**
+If you have an NVIDIA GPU and the Docker Container Toolkit installed, simply add `--gpus all`:
+```bash
+docker run --gpus all -p 8000:8000 -v "/path/to/repo/models:/app/models" -v "/path/to/repo/data:/app/data" -v "/path/to/repo/dataset:/app/dataset" depthwizard-api
+```
+
+The API will now be live at `http://localhost:8000`.
+
+---
+
 ## Project Structure
 
 ```
 Depthwizard/
-├── preprocessing/        # Python ML pipeline
-│   ├── stages/          # 7-stage implementations
-│   ├── ingest/          # File I/O + format detection
-│   ├── pipelines/       # Training + inference orchestrators
-│   └── tests/           # 94-test automated suite
-├── frontend/            # Next.js 14 web app
-│   ├── app/            # 7 routes (upload, processing, results, history, etc.)
-│   ├── components/     # UI, 3D, motion
-│   ├── lib/            # API hooks, stores, colormaps
-│   └── public/         # Static assets
-└── DOCS/               # Full architecture + specs
-    ├── ARCHITECTURE.md
-    ├── PRD.md
-    ├── STATUS.md
-    └── Pre-Processing DOCS/  # Mathematical specifications
+├── src/
+│   └── depthwizard/      # Core ML library (ingestion, processing, products)
+├── scripts/              # Executable Python scripts
+│   └── inference/        # (run_pipeline_real_image.py, run_pipeline_custom_image.py)
+├── models/               # PyTorch Checkpoints (mounted via Docker)
+├── data/                 # Raw/Uploaded/Products data (mounted via Docker)
+├── dataset/              # Ground truth and reference DSMs (mounted via Docker)
+├── viewer/               # Vanilla JS/Three.js frontend 3D Viewer
+├── main.py               # FastAPI backend server (Auto-detects Ground Truth)
+├── Dockerfile            # Production-ready Docker container definition
+├── pyproject.toml        # Python project dependencies (Hatchling)
+└── DOCS/                 # Documentation (Specs, Architecture, Status)
 ```
 
 ---
