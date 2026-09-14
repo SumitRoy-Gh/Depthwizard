@@ -12,6 +12,7 @@ import { MetadataStrip } from "@/components/results/MetadataStrip";
 import { MapPanel } from "@/components/results/MapPanel";
 import { ResultControls } from "@/components/results/ResultControls";
 import { DownloadMenu } from "@/components/results/DownloadMenu";
+import { RiskPanel } from "@/components/results/RiskPanel";
 
 const FlythroughViewer = dynamic(
   () => import("@/components/three/FlythroughViewer").then((m) => m.FlythroughViewer),
@@ -150,6 +151,14 @@ export default function ResultsPage() {
               </p>
             </div>
           )}
+
+          {/* Disaster risk panel */}
+          <RiskPanel
+            floodRiskUrl={data.artifacts?.floodRiskUrl}
+            quakeRiskUrl={data.artifacts?.quakeRiskUrl}
+            riskZonesUrl={data.artifacts?.riskZonesUrl}
+            thumbnailUrl={data.artifacts?.heightmapUrl}
+          />
 
           <div className="glass rounded-2xl p-4">
             <p className="font-mono text-2xs uppercase tracking-[0.18em] text-cyan">Pipeline</p>

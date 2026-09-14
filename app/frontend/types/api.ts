@@ -61,6 +61,10 @@ export interface JobStatus {
     rawDepthUrl?: string;
     correctedDepthUrl?: string;
     metadataUrl?: string;
+    // Disaster risk overlays (Part B)
+    floodRiskUrl?: string;
+    quakeRiskUrl?: string;
+    riskZonesUrl?: string;
   };
 }
 

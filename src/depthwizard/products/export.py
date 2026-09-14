@@ -388,4 +388,10 @@ def generate_all_products(
         products["confidence"] = conf_path
         print(f"  [OK] Confidence -> {conf_path}")
 
+    # Return the in-memory arrays alongside the file paths so downstream
+    # steps (risk analysis) don't need to re-read/re-compute them.
+    # IMPORTANT: callers must pop("_arrays") before iterating products as
+    # file paths — Path() will crash on a numpy array.
+    products["_arrays"] = {"dtm": dtm, "ndsm": ndsm}
+
     return products

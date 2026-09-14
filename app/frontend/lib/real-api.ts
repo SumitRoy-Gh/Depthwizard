@@ -23,6 +23,10 @@ interface ProcessResponse {
     slope?: string;
     hillshade?: string;
     confidence?: string;
+    // Disaster risk overlays (Part B)
+    flood_risk_png?: string;
+    quake_risk_png?: string;
+    risk_zones_json?: string;
   };
   scene_manifest?: string;
   viewer_url?: string;
@@ -120,6 +124,10 @@ export async function uploadImage(file: File): Promise<UploadResult> {
       confidenceUrl: data.products?.confidence ? `${baseUrl()}${data.products.confidence}` : undefined,
       meshUrl: data.viewer_url ? `${baseUrl()}${data.viewer_url}` : undefined,
       metadataUrl: data.scene_manifest ? `${baseUrl()}${data.scene_manifest}` : undefined,
+      // Disaster risk overlays (Part B)
+      floodRiskUrl: data.products?.flood_risk_png ? `${baseUrl()}${data.products.flood_risk_png}` : undefined,
+      quakeRiskUrl: data.products?.quake_risk_png ? `${baseUrl()}${data.products.quake_risk_png}` : undefined,
+      riskZonesUrl: data.products?.risk_zones_json ? `${baseUrl()}${data.products.risk_zones_json}` : undefined,
     },
   });
 

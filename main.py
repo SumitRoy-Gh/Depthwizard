@@ -44,6 +44,9 @@ from depthwizard.calibration.region_calibration import (
 from depthwizard.calibration.htc_refinement import apply_bias_refinement
 from depthwizard.products.export import generate_all_products
 from depthwizard.products.mesh_generator import export_tiled_scene
+from depthwizard.products.risk_analysis import compute_all_risk_products, risk_to_rgba
+from PIL import Image
+import json
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -111,7 +114,7 @@ def _find_gt_files(stem: str) -> tuple[Path | None, Path | None]:
 # Main endpoint
 # ---------------------------------------------------------------------------
 @app.post("/process")
-async def process_image(file: UploadFile = File(...)):
+def process_image(file: UploadFile = File(...)):
     """
     End-to-End Pipeline — mirrors run_pipeline_real_image.py exactly:
       Stage 1-2: Ingest + Preprocess (radiometric, mask, denoise)
@@ -241,6 +244,48 @@ async def process_image(file: UploadFile = File(...)):
             ransac_inlier_mask=ransac_inlier_mask,
             ndsm_kernel=51,
         )
+
+        # =================================================================
+        # Stage 6.5: Disaster Risk Proxies
+        #   Uses DTM + nDSM arrays already computed in Stage 6 — no re-read.
+        #   Flood risk   : relative ground depression (low spots pool water).
+        #   Quake risk   : building density × height variance (structural proxy).
+        # =================================================================
+        print(f"[{job_id}] Stage 6.5: Computing disaster risk proxies...")
+        try:
+            # Pop _arrays BEFORE the path-builder — Path() crashes on numpy arrays.
+            arrays = products.pop("_arrays", None)
+            if arrays is None:
+                raise RuntimeError("export.py did not return _arrays — check export.py patch")
+
+            risk = compute_all_risk_products(
+                dtm=arrays["dtm"],
+                ndsm=arrays["ndsm"],
+                gsd_m=meta.gsd_m,
+            )
+
+            flood_png_path = job_out_dir / "flood_risk.png"
+            quake_png_path = job_out_dir / "quake_risk.png"
+            risk_json_path = job_out_dir / "risk_zones.json"
+
+            Image.fromarray(risk_to_rgba(risk["flood_risk_grid"])).save(flood_png_path)
+            Image.fromarray(risk_to_rgba(risk["earthquake_risk_grid"])).save(quake_png_path)
+            with open(risk_json_path, "w") as _f:
+                json.dump(
+                    {"flood": risk["flood_zones"], "earthquake": risk["earthquake_zones"]},
+                    _f,
+                )
+
+            products["flood_risk_png"] = str(flood_png_path)
+            products["quake_risk_png"] = str(quake_png_path)
+            products["risk_zones_json"] = str(risk_json_path)
+            print(f"[{job_id}]   Stage 6.5 OK — risk outputs saved.")
+        except Exception as _risk_err:
+            import traceback as _tb
+            print(f"[{job_id}]   Stage 6.5 FAILED (non-fatal): {_risk_err}")
+            print(_tb.format_exc())
+            # Remove _arrays if still present to avoid crashing Path() below
+            products.pop("_arrays", None)
 
         # =================================================================
         # Stage 7: 3D Mesh Generation
