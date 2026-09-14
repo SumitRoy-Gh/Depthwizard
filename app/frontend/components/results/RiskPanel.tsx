@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Waves, Activity, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useUi } from "@/store/ui-store";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -52,10 +53,12 @@ function RiskOverlay({
   mode,
   floodUrl,
   quakeUrl,
+  opacity,
 }: {
   mode: RiskMode;
   floodUrl?: string;
   quakeUrl?: string;
+  opacity: number;
 }) {
   const src = mode === "flood" ? floodUrl : quakeUrl;
   if (!src) return null;
@@ -67,7 +70,7 @@ function RiskOverlay({
         src={src}
         alt={`${mode} risk overlay`}
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        animate={{ opacity }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.3 }}
         className="pointer-events-none absolute inset-0 h-full w-full object-cover rounded-xl"
@@ -149,6 +152,7 @@ export function RiskPanel({
   const [zones, setZones] = useState<RiskZones | null>(null);
   const [loadErr, setLoadErr] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const overlayOpacity = useUi((s) => s.overlayOpacity);
 
   // Fetch risk_zones.json when URL is available
   useEffect(() => {
@@ -262,6 +266,7 @@ export function RiskPanel({
                 mode={mode}
                 floodUrl={floodRiskUrl}
                 quakeUrl={quakeRiskUrl}
+                opacity={overlayOpacity}
               />
               {/* Legend */}
               <div className="pointer-events-none absolute bottom-2 left-2 flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-1 backdrop-blur">

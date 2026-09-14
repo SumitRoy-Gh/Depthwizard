@@ -27,6 +27,13 @@ interface ProcessResponse {
     flood_risk_png?: string;
     quake_risk_png?: string;
     risk_zones_json?: string;
+    // Colourized preview PNGs
+    dsm_preview?: string;
+    ndsm_preview?: string;
+    dtm_preview?: string;
+    slope_preview?: string;
+    hillshade_preview?: string;
+    confidence_preview?: string;
   };
   scene_manifest?: string;
   viewer_url?: string;
@@ -128,6 +135,13 @@ export async function uploadImage(file: File): Promise<UploadResult> {
       floodRiskUrl: data.products?.flood_risk_png ? `${baseUrl()}${data.products.flood_risk_png}` : undefined,
       quakeRiskUrl: data.products?.quake_risk_png ? `${baseUrl()}${data.products.quake_risk_png}` : undefined,
       riskZonesUrl: data.products?.risk_zones_json ? `${baseUrl()}${data.products.risk_zones_json}` : undefined,
+      // Colourized preview PNGs
+      dsmPreviewUrl: data.products?.dsm_preview ? `${baseUrl()}${data.products.dsm_preview}` : undefined,
+      ndsmPreviewUrl: data.products?.ndsm_preview ? `${baseUrl()}${data.products.ndsm_preview}` : undefined,
+      dtmPreviewUrl: data.products?.dtm_preview ? `${baseUrl()}${data.products.dtm_preview}` : undefined,
+      slopePreviewUrl: data.products?.slope_preview ? `${baseUrl()}${data.products.slope_preview}` : undefined,
+      hillshadePreviewUrl: data.products?.hillshade_preview ? `${baseUrl()}${data.products.hillshade_preview}` : undefined,
+      confidencePreviewUrl: data.products?.confidence_preview ? `${baseUrl()}${data.products.confidence_preview}` : undefined,
     },
   });
 

@@ -65,6 +65,13 @@ export interface JobStatus {
     floodRiskUrl?: string;
     quakeRiskUrl?: string;
     riskZonesUrl?: string;
+    // Colourized preview PNGs
+    dsmPreviewUrl?: string;
+    ndsmPreviewUrl?: string;
+    dtmPreviewUrl?: string;
+    slopePreviewUrl?: string;
+    hillshadePreviewUrl?: string;
+    confidencePreviewUrl?: string;
   };
 }
 

@@ -25,6 +25,17 @@ const velocity = new THREE.Vector3();
 const direction = new THREE.Vector3();
 const SPEED = 12.0;
 
+// Listen for view controls from the parent React app
+window.addEventListener('message', (event) => {
+    if (event.data?.type === 'SET_EXAGGERATION') {
+        const scale = event.data.value;
+        terrainChunks.forEach(mesh => {
+            mesh.scale.set(1, scale, 1);
+            mesh.updateMatrix();
+        });
+    }
+});
+
 init();
 animate();
 

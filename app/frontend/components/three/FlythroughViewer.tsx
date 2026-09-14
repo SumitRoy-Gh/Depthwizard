@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { ExternalLink } from "lucide-react";
 import { Pill } from "@/components/shared/Pill";
 
@@ -10,7 +12,15 @@ export interface FlythroughViewerProps {
   meshUrl?: string;
 }
 
-export function FlythroughViewer({ meshUrl }: FlythroughViewerProps) {
+export function FlythroughViewer({ meshUrl, exaggeration }: FlythroughViewerProps) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage({ type: 'SET_EXAGGERATION', value: exaggeration }, '*');
+    }
+  }, [exaggeration]);
+
   if (!meshUrl) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-grid bg-elevated/40">
@@ -27,6 +37,7 @@ export function FlythroughViewer({ meshUrl }: FlythroughViewerProps) {
   return (
     <div className="relative h-full w-full bg-[#87ceeb]">
       <iframe
+        ref={iframeRef}
         src={meshUrl}
         title="Generated 3D terrain viewer"
         className="h-full w-full border-0"

@@ -16,6 +16,7 @@ import { useHistory } from "@/store/history-store";
 import { Magnetic } from "@/components/shared/Motion";
 import { cn } from "@/lib/cn";
 import { Pill } from "@/components/shared/Pill";
+import { TiffPreview } from "@/components/upload/TiffPreview";
 
 const SUPPORTED = [".tif", ".tiff", ".png", ".jpg", ".jpeg"];
 const MAX_SIZE_MB = 200;
@@ -235,12 +236,20 @@ function PreviewCard({
       <div className="grid gap-0 md:grid-cols-[260px_1fr]">
         {/* Thumbnail */}
         <div className="relative aspect-square overflow-hidden border-r border-hairline bg-elevated">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={preview}
-            alt={file.name}
-            className="h-full w-full object-cover"
-          />
+          {isGeo ? (
+            <TiffPreview
+              file={file}
+              fallbackUrl={preview}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={preview}
+              alt={file.name}
+              className="h-full w-full object-cover"
+            />
+          )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-black/30 via-transparent to-transparent" />
           <button
             onClick={onClear}

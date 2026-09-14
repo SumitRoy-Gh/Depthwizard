@@ -25,6 +25,53 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
+# Preview PNG helper  (colourized for human consumption)
+# ---------------------------------------------------------------------------
+
+def write_preview_png(
+    array: np.ndarray,
+    output_path: str,
+    colormap: str = "viridis",
+    vmin: float | None = None,
+    vmax: float | None = None,
+) -> str:
+    """
+    Save a colourized PNG preview of a 2-D float/uint array.
+    Uses matplotlib's colormaps so judges see meaningful colours instead of
+    solid black/white GeoTIFF blobs.
+
+    Args:
+        array:      2-D numpy array (any numeric dtype).
+        output_path: Destination .png path.
+        colormap:   Any matplotlib colormap name.
+        vmin/vmax:  Clip range (None = per-image percentile stretch).
+    Returns:
+        output_path written to.
+    """
+    try:
+        import matplotlib  # type: ignore
+        matplotlib.use("Agg")  # headless — no display needed
+        import matplotlib.pyplot as plt  # type: ignore
+        from PIL import Image as _PILImage
+
+        arr = array.astype(np.float32)
+        if vmin is None:
+            vmin = float(np.nanpercentile(arr, 2))
+        if vmax is None:
+            vmax = float(np.nanpercentile(arr, 98))
+        if vmax == vmin:
+            vmax = vmin + 1.0
+
+        normed = np.clip((arr - vmin) / (vmax - vmin), 0.0, 1.0)
+        cmap = plt.get_cmap(colormap)
+        rgba = (cmap(normed) * 255).astype(np.uint8)          # H×W×4
+        _PILImage.fromarray(rgba, mode="RGBA").save(output_path)
+    except Exception as _e:  # never crash the whole pipeline for a preview
+        print(f"  [WARN] Preview PNG failed ({output_path}): {_e}")
+    return output_path
+
+
+# ---------------------------------------------------------------------------
 # GeoTIFF Writer
 # ---------------------------------------------------------------------------
 
@@ -346,6 +393,9 @@ def generate_all_products(
     dsm_path = os.path.join(output_dir, f"{scene_name}_DSM.tif")
     write_geotiff(dsm, dsm_path, crs=crs, transform=transform)
     products["dsm"] = dsm_path
+    dsm_preview = os.path.join(output_dir, f"{scene_name}_DSM_preview.png")
+    write_preview_png(dsm, dsm_preview, colormap="terrain")
+    products["dsm_preview"] = dsm_preview
     print(f"  [OK] DSM -> {dsm_path}")
 
     # 2. nDSM (Above-Ground-Level)
@@ -353,12 +403,18 @@ def generate_all_products(
     ndsm_path = os.path.join(output_dir, f"{scene_name}_nDSM.tif")
     write_geotiff(ndsm, ndsm_path, crs=crs, transform=transform)
     products["ndsm"] = ndsm_path
+    ndsm_preview = os.path.join(output_dir, f"{scene_name}_nDSM_preview.png")
+    write_preview_png(ndsm, ndsm_preview, colormap="YlOrRd", vmin=0)
+    products["ndsm_preview"] = ndsm_preview
     print(f"  [OK] nDSM -> {ndsm_path}")
 
     # Also export DTM
     dtm_path = os.path.join(output_dir, f"{scene_name}_DTM.tif")
     write_geotiff(dtm, dtm_path, crs=crs, transform=transform)
     products["dtm"] = dtm_path
+    dtm_preview = os.path.join(output_dir, f"{scene_name}_DTM_preview.png")
+    write_preview_png(dtm, dtm_preview, colormap="terrain")
+    products["dtm_preview"] = dtm_preview
     print(f"  [OK] DTM -> {dtm_path}")
 
     # 3. Slope Map
@@ -366,6 +422,9 @@ def generate_all_products(
     slope_path = os.path.join(output_dir, f"{scene_name}_slope.tif")
     write_geotiff(slope, slope_path, crs=crs, transform=transform)
     products["slope"] = slope_path
+    slope_preview = os.path.join(output_dir, f"{scene_name}_slope_preview.png")
+    write_preview_png(slope, slope_preview, colormap="plasma", vmin=0)
+    products["slope_preview"] = slope_preview
     print(f"  [OK] Slope -> {slope_path}")
 
     # 4. Hillshade
@@ -373,19 +432,26 @@ def generate_all_products(
     hillshade_path = os.path.join(output_dir, f"{scene_name}_hillshade.tif")
     write_geotiff(hillshade, hillshade_path, crs=crs, transform=transform, dtype="uint8")
     products["hillshade"] = hillshade_path
+    # Hillshade is already uint8 0-255 — grey is correct, just save as-is
+    hillshade_preview = os.path.join(output_dir, f"{scene_name}_hillshade_preview.png")
+    write_preview_png(hillshade.astype(np.float32), hillshade_preview, colormap="gray")
+    products["hillshade_preview"] = hillshade_preview
     print(f"  [OK] Hillshade -> {hillshade_path}")
 
     # 5. Confidence Map
     if valid_mask is not None:
         conf = compute_confidence_map(
-            valid_mask, 
-            ransac_inlier_mask, 
-            dsm=dsm, 
+            valid_mask,
+            ransac_inlier_mask,
+            dsm=dsm,
             dtm=dtm
         )
         conf_path = os.path.join(output_dir, f"{scene_name}_confidence.tif")
         write_geotiff(conf, conf_path, crs=crs, transform=transform, dtype="uint8")
         products["confidence"] = conf_path
+        conf_preview = os.path.join(output_dir, f"{scene_name}_confidence_preview.png")
+        write_preview_png(conf.astype(np.float32), conf_preview, colormap="RdYlGn")
+        products["confidence_preview"] = conf_preview
         print(f"  [OK] Confidence -> {conf_path}")
 
     # Return the in-memory arrays alongside the file paths so downstream

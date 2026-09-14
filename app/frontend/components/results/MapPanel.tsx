@@ -3,13 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { fromUrl } from "geotiff";
 import { Loader2, TriangleAlert } from "lucide-react";
-import { viridisHex } from "@/lib/colormap";
+import { viridisHex, terrainHex } from "@/lib/colormap";
+import { useUi } from "@/store/ui-store";
 
 export function MapPanel({ heightmapDataUrl }: { heightmapDataUrl?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">(
     heightmapDataUrl ? "loading" : "error"
   );
+  const colormap = useUi((s) => s.colormap);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,7 +53,7 @@ export function MapPanel({ heightmapDataUrl }: { heightmapDataUrl?: string }) {
         for (let index = 0; index < raster.length; index += 1) {
           const value = raster[index];
           const normalized = Number.isFinite(value) ? (value - min) / range : 0;
-          const color = viridisHex(normalized);
+          const color = colormap === "terrain" ? terrainHex(normalized) : viridisHex(normalized);
           const red = Number.parseInt(color.slice(1, 3), 16);
           const green = Number.parseInt(color.slice(3, 5), 16);
           const blue = Number.parseInt(color.slice(5, 7), 16);
@@ -72,7 +74,7 @@ export function MapPanel({ heightmapDataUrl }: { heightmapDataUrl?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [heightmapDataUrl]);
+  }, [heightmapDataUrl, colormap]);
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-2xl border border-white/8 bg-[#050810]">
@@ -93,7 +95,7 @@ export function MapPanel({ heightmapDataUrl }: { heightmapDataUrl?: string }) {
       )}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/75 to-transparent px-4 pb-3 pt-8">
         <span className="font-mono text-2xs uppercase tracking-[0.16em] text-white/80">
-          DSM · Viridis elevation
+          DSM · {colormap === "terrain" ? "Terrain" : "Viridis"} elevation
         </span>
         <span className="font-mono text-2xs uppercase tracking-[0.16em] text-white/60">
           low → high

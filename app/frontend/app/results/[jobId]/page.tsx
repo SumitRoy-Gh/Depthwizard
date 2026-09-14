@@ -13,6 +13,7 @@ import { MapPanel } from "@/components/results/MapPanel";
 import { ResultControls } from "@/components/results/ResultControls";
 import { DownloadMenu } from "@/components/results/DownloadMenu";
 import { RiskPanel } from "@/components/results/RiskPanel";
+import { ProductMaps } from "@/components/results/ProductMaps";
 
 const FlythroughViewer = dynamic(
   () => import("@/components/three/FlythroughViewer").then((m) => m.FlythroughViewer),
@@ -127,6 +128,16 @@ export default function ResultsPage() {
           </motion.div>
 
           <MetadataStrip meta={data.meta} />
+
+          {/* Pipeline product maps strip */}
+          <ProductMaps
+            dsmPreviewUrl={data.artifacts?.dsmPreviewUrl}
+            hillshadePreviewUrl={data.artifacts?.hillshadePreviewUrl}
+            slopePreviewUrl={data.artifacts?.slopePreviewUrl}
+            dtmPreviewUrl={data.artifacts?.dtmPreviewUrl}
+            ndsmPreviewUrl={data.artifacts?.ndsmPreviewUrl}
+            confidencePreviewUrl={data.artifacts?.confidencePreviewUrl}
+          />
         </div>
 
         <motion.aside
