@@ -22,15 +22,15 @@ build/
 dist/
 *.egg-info/
 
-# # JavaScript dependencies and Next.js output
-# app/frontend/node_modules/
-# app/frontend/.next/
-# app/frontend/out/
-# app/frontend/tsconfig.tsbuildinfo
-# app/frontend/next-env.d.ts
-# app/frontend/*.log
-# app/frontend/AGENTS.md
-# app/frontend/CLAUDE.md
+# JavaScript dependencies and Next.js output
+app/frontend/node_modules/
+app/frontend/.next/
+app/frontend/out/
+app/frontend/tsconfig.tsbuildinfo
+app/frontend/next-env.d.ts
+app/frontend/*.log
+app/frontend/AGENTS.md
+app/frontend/CLAUDE.md
 
 # Heavy runtime assets: copy these separately or use Git LFS/object storage
 models/
